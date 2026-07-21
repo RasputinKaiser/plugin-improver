@@ -45,9 +45,14 @@ def est_tokens(chars):
     return int(round(chars / CHARS_PER_TOKEN))
 
 
+FOLD_MARKERS = {">", ">-", ">+", "|", "|-", "|+"}
+
+
 def split_frontmatter(text):
-    """Return (frontmatter_dict, body_str) for a SKILL.md. Tiny hand parser
-    matching validate.py: top-level `key: value` scalars only."""
+    """Return (frontmatter_dict, body_str) for a SKILL.md. Tiny hand parser in
+    validate.py's style, extended (like curator.py) to fold indented
+    continuation lines into the current key — so a `description: >` / `|` block
+    scalar is counted in full, not dropped to its marker character."""
     if not text.startswith("---"):
         return None, text
     lines = text.splitlines()
@@ -58,11 +63,17 @@ def split_frontmatter(text):
             break
     if end is None:
         return None, text
-    fm = {}
+    fm, key = {}, None
     for line in lines[1:end]:
         if ":" in line and not line.startswith((" ", "\t", "#")):
             key, _, val = line.partition(":")
-            fm[key.strip()] = val.strip().strip('"').strip("'")
+            key = key.strip()
+            val = val.strip()
+            if val in FOLD_MARKERS:  # block scalar: value is the continuations
+                val = ""
+            fm[key] = val.strip('"').strip("'")
+        elif key and line.startswith((" ", "\t")):
+            fm[key] = (fm[key] + " " + line.strip().strip('"').strip("'")).strip()
     body = "\n".join(lines[end + 1:])
     return fm, body
 
@@ -312,6 +323,20 @@ def selftest():
         check(bl["body_status"] == "error", "bloat body error (>1500 words)")
         check(bl["desc_headroom_chars"] == -400, "bloat desc headroom -400")
         check(len(brep["flags"]) == 2, "bloat has 2 flags")
+
+        # Folded (block-scalar) description must be counted in full, not
+        # collapsed to its ">" marker.
+        froot = Path(tmp) / "folded"
+        fdir = froot / "skills" / "fold"
+        fdir.mkdir(parents=True)
+        (fdir / "SKILL.md").write_text(
+            "---\nname: fold\ndescription: >\n  " + "a" * 60 + "\n  "
+            + "b" * 60 + "\n---\n\nbody words here\n", encoding="utf-8")
+        frep = analyze_plugin(froot)
+        fl = frep["skills"][0]
+        # 60 + 60 chars joined by one space = 121 chars.
+        check(fl["desc_chars"] == 121,
+              f"folded desc counted in full (got {fl['desc_chars']})")
 
         # Warn tier: desc 500 chars (>400,<=600), body 900 words (>600,<=1500).
         wroot = Path(tmp) / "warn"
