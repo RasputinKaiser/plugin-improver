@@ -41,14 +41,32 @@ trigger phrases users say>. <Optional: coverage nouns that aid matching>.
 - Lists of 15 trigger synonyms — 3 or 4 that users actually say beat 15 generic ones.
 - Growing past ~400 chars — every char is paid in every session's context.
 
-## Test matrix template
+## Reading the routing graph
+
+The graph (`curator.py graph`) is measured collision evidence — read it, don't guess which skills fight. Three signals, each pointing at a specific edit:
+
+- **Confusable pair / cluster edge** — every edge prints WHY: `shared: <terms>` and, when present, `PHRASES: <quoted trigger>`. Fix by making ONE side distinctive: drop or replace the generic shared token, or add a term the other skill can't claim. If the edge names a shared PHRASE, one skill must stop claiming that phrase (reword it or add a NOT-clause naming the sibling).
+  - Example edge `evaluate-plugin ~ evaluate-skill — shared: evaluate, fix, first; PHRASES: what should i fix first` → give one a distinctive object ("evaluate a whole plugin's manifest+skills" vs "evaluate a single skill's quality") and let only one own "what should I fix first".
+- **Trigger-hog** (high betweenness) — bridges many topic groups, so a single sharpening removes many edges. Edit these before leaf skills.
+- **Minimal-edit set** — the smallest set of descriptions whose edits clear every edge. Work this list top-down; skills nearer the top cover the most edges.
+
+A lexical edge is a hypothesis. Confirm the fix behaviorally with probes + `route_eval.py` (SKILL.md step 5), not by re-reading the descriptions.
+
+## Authoring near-miss probes
+
+Near-misses are where routing actually breaks — a probe set of only should-trigger phrases will score ~100% and prove nothing. For each skill:
+
+- **Should-trigger (5)** — real user phrasings, including paraphrases the description doesn't quote verbatim.
+- **Near-miss (5)** — prompts a naive router would hand to THIS skill but that belong to a sibling or to no skill. Mine them straight from the graph: each `shared:` term on a collision edge is a near-miss seed. Write a prompt built around that shared term whose correct target is the sibling, and confirm the rewritten description no longer claims it.
+
+## Test matrix as a probes file
 
 | # | Prompt | Expected skill | Passes before | Passes after |
 |---|--------|----------------|---------------|--------------|
 | S1–S5 | should-trigger prompts | this skill | | |
 | N1–N5 | near-miss prompts | sibling / none | | |
 
-Store the matrix in the target plugin at `.plugin-improver/trigger-matrix.md` so future passes rerun it.
+Persist this as `probes.json` in the target plugin's `.plugin-improver/probes/` (seed it with `curator.py probes`, then hand-add rows) so `route_eval.py --min-baseline` reruns it every pass — a measured regression test, not a mental exercise.
 
 ## Opting out of implicit invocation (Codex only)
 
