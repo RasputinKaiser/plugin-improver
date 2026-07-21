@@ -32,4 +32,4 @@ jobs:
         run: python3 scripts/calibrate.py selftest
 
       - name: Self-score floor (deterministic auto-score must not regress)
-        run: python3 scripts/score.py . --min 57
+        run: python3 scripts/score.py . --min 70

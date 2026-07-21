@@ -3,6 +3,18 @@
 All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## 1.4.0 - 2026-07-21
+
+### Changed
+- **Audit scoring recalibrated: demanding, discriminating, not saturated.** Both scorers were saturated (the deterministic floor bottom-compressed — `skill_quality` was `0/25` for every plugin and `hooks_health` maxed out for 93% via a free "no hooks → 10" — while the human grade bands let a mature-but-improvable plugin reach 90+/A). The recalibration, applied consistently across `scripts/score.py`, the `skills/plugin-audit/references/scoring-rubric.md` rubric, `deterministic-scoring.md`, `report-style.md`, and `skill-curator`'s inventory `score()`:
+  - **Graduated credit** replaces coarse pass/fail steps; **budget dimensions reward leanness** (a 599-word body scores far below a 300-word one), not merely being within budget.
+  - **`skill_quality` gained machine signal** — imperative-body, actionable-specifics, and failure-handling proxies — so the deterministic floor discriminates (e.g. plugin-improver's own floor moved from a saturated 60 to 74.4).
+  - **N/A dimensions redistribute their weight** instead of granting a free max — a plugin that correctly ships no hooks no longer collects a free 10; the dimension is dropped and its weight spread across the applicable ones, renormalized to 100.
+  - **Frozen 5-band grade scale** (92–100 Exceptional · 82–91 Strong · 68–81 Solid · 50–67 Needs work · <50 Poor) replaces the lenient bands; 92+ is now genuinely hard but achievable.
+
+### Added
+- **`scripts/calibrate.py` — a saturation meter.** Scores a set of plugin roots and reports the score distribution (histogram, mean/median/stdev), per-dimension max-out (saturation) rate, and band split; `--check` fails when any dimension over-saturates or the spread collapses (a guardrail against re-saturation). Wired into CI. The self-score floor gate moved to `--min 70`.
+
 ## 1.3.0 - 2026-07-20
 
 ### Added

@@ -280,16 +280,18 @@ def _healthy_fixtures(td):
     total-score spread. Only manifest_integrity and hooks_health can saturate
     (all other dimensions' auto ceilings sit below their max)."""
     roots = []
-    # f1: perfect manifest (max), no hooks (hooks max) — the top scorer.
-    p = td / "f1"; score._make_good_plugin(p); roots.append(p)
-    # f2: perfect manifest (max), hooks present -> hooks NOT max.
-    p = td / "f2"; score._make_good_plugin(p); _add_hooks(p); roots.append(p)
-    # f3: broken manifest, hooks present -> neither maxes.
-    p = td / "f3"; score._make_good_plugin(p); _break_manifest(p); _add_hooks(p); roots.append(p)
-    # f4: weak plugin, hooks present -> neither maxes.
-    p = td / "f4"; score._make_broken_plugin(p); _add_hooks(p); roots.append(p)
-    # f5: weak plugin, no hooks -> hooks maxes.
-    p = td / "f5"; score._make_broken_plugin(p); roots.append(p)
+    # Spread across score.py's quality tiers so totals range widely and no single
+    # dimension saturates. _excellent tops the scale; _poor floors it.
+    # f1: excellent, no hooks (hooks dimension N/A -> dropped, not maxed).
+    p = td / "f1"; score._excellent(p); roots.append(p)
+    # f2: solid, hooks present -> hooks graduated, not max.
+    p = td / "f2"; score._solid(p); _add_hooks(p); roots.append(p)
+    # f3: fair, drifted manifest + hooks -> neither maxes.
+    p = td / "f3"; score._fair(p); _break_manifest(p); _add_hooks(p); roots.append(p)
+    # f4: poor, hooks present.
+    p = td / "f4"; score._poor(p); _add_hooks(p); roots.append(p)
+    # f5: poor, no hooks.
+    p = td / "f5"; score._poor(p); roots.append(p)
     return roots
 
 
@@ -326,7 +328,7 @@ def selftest():
         dgen = []
         for i in range(3):
             p = td / f"dgen{i}"
-            score._make_good_plugin(p)  # identical: no hooks + perfect manifest
+            score._excellent(p)  # identical: no hooks + perfect manifest
             dgen.append(p)
         drows, _ = collect(dgen)
         dan = analyze(drows)
@@ -334,7 +336,8 @@ def selftest():
         dchecks = [
             ("degenerate stdev == 0", dan["stats"]["stdev"] == 0.0),
             ("degenerate manifest maxes 100%", dan["maxout"]["manifest_integrity"]["frac"] == 1.0),
-            ("degenerate hooks maxes 100%", dan["maxout"]["hooks_health"]["frac"] == 1.0),
+            # no-hooks plugins now drop hooks (N/A) rather than earning a free max.
+            ("degenerate hooks N/A (0% max-out)", dan["maxout"]["hooks_health"]["frac"] == 0.0),
             ("degenerate --check FAILS", len(dcheck) > 0),
             ("failure names a cause", any("maxes out" in f or "stdev" in f for f in dcheck)),
         ]

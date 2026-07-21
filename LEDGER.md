@@ -1,5 +1,28 @@
 # Improvement ledger — plugin-improver
 
+## 2026-07-21 — 1.3.0 → 1.4.0 (audit recalibration: not saturated, not impossible)
+- Prompted by an audit run scoring plugin-improver 91/A off a 60 deterministic floor. Empirically the
+  scoring was saturated at both ends: measured over 14 real plugins the auto-score was bottom-compressed
+  (range 28–60, `skill_quality` 0/25 for ALL, `hooks_health` 93% at max via a free "no hooks → 10"), while
+  the human grade bands let a mature-but-improvable plugin reach 90+/A. User chose: demanding top bands,
+  N/A-dimensions-redistribute, and to also recalibrate curator's inventory score.
+- Parallel batch: 5 file-isolated units against a coordinator-frozen calibration contract (grade bands +
+  six anti-saturation principles), merged via 5 PRs #10–#14. score.py + its mapping doc (one owner),
+  scoring-rubric.md, report-style.md + SKILL.md, NEW calibrate.py + CI, and curator.py's score() surface
+  (the sole toucher of the otherwise-frozen 2700-line engine).
+- Each script worker's code-review caught real bugs pre-merge: curator (band computed on the unrounded
+  float, contradicting the rounded display), score.py (5 — weak selftest assertions, `pathlike` over-match
+  crediting prose like "and/or", `--min-baseline` unguarded against the scale change).
+- Integration break the isolated worktrees hid: calibrate.py's selftest called `score._make_good_plugin`,
+  which U1 renamed to tier builders (`_excellent/_solid/_fair/_poor`); the merged tree crashed. Coordinator
+  fix: repointed calibrate's fixtures to the tier builders and corrected a stale "no-hooks maxes hooks 100%"
+  assertion (the free-max we removed) to the new N/A behavior.
+- Verify (merged tree): validate 11/11, curator selftest 87/87, score.py + calibrate.py selftests green,
+  `calibrate.py --check` over ~/plugins PASSES (no dimension saturates; hooks max-out 93% → 0%; skill_quality
+  now graduated). plugin-improver's deterministic floor moved 60 → 74.4 (Solid); fixtures span
+  excellent 97 / solid 89 / fair 64 / poor 30. CI self-score floor 57 → 70. Minor bump (scoring behavior
+  change + new calibrate.py capability; no skill renamed).
+
 ## 2026-07-20 — 1.2.0 → 1.3.0 (diagnostics & evaluation batch: roadmap Phases 2–4 + error/token mining)
 - Parallel batch: 9 independently-mergeable units, each owning disjoint files (worktree-isolated,
   merged via 9 PRs #1–#9). curator.py was deliberately kept FROZEN — new capabilities ship as new
