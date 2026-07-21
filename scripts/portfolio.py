@@ -205,12 +205,12 @@ def render_md(res):
 def _make_fixtures(base):
     """Two fake plugin sources + a cache/ dir that must be skipped."""
     root = base / "plugins"
-    # good plugin
-    score._make_good_plugin(root / "good-plugin")
-    # broken plugin
-    score._make_broken_plugin(root / "broken-plugin")
+    # good plugin (top scorer)
+    score._excellent(root / "good-plugin")
+    # weak plugin (floors the fix-first ranking)
+    score._poor(root / "broken-plugin")
     # a cache dir that must NOT be scored
-    score._make_good_plugin(root / "cache" / "some-mkt" / "cached-plugin" / "1.0.0")
+    score._excellent(root / "cache" / "some-mkt" / "cached-plugin" / "1.0.0")
     # a non-plugin dir that must be ignored
     (root / "not-a-plugin").mkdir(parents=True, exist_ok=True)
     (root / "not-a-plugin" / "README.md").write_text("nope", encoding="utf-8")
