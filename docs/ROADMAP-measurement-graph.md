@@ -1,10 +1,26 @@
 # plugin-improver 2.0 — measurement & graph roadmap (design + worker contract)
 
-Status: approved design, not yet built. Four capabilities forming a dependency DAG
+Status: **all four phases delivered.** Four capabilities forming a dependency DAG
 (`Phase 1 → {2,3} → 4`), each independently shippable with its own version bump +
 LEDGER entry. Everything is stdlib-only except Phase 4's injected model call.
 Conventions and hard constraints from `docs/DESIGN.md` still apply (identity =
 RasputinKaiser only; never rename existing skills; context discipline).
+
+Delivery map (which script delivers which phase):
+
+| Phase | Delivered by | Status |
+|---|---|---|
+| Phase 1 — Graph core | `curator.py graph` (+ `report` fold-in) | DELIVERED (v1.2.0) |
+| Phase 2 — Deterministic scoring + CI gate | `scripts/score.py` (`--min-baseline`) | DELIVERED |
+| Phase 3 — Portfolio | `scripts/portfolio.py` | DELIVERED |
+| Phase 3 — `plugin-migrate` (8th skill) | — | **NOT built** — out of scope (this batch is diagnostics/evaluation, not migration); still a future item |
+| Phase 4 — Empirical routing loop | `scripts/route_eval.py` (`--min-baseline`) | DELIVERED |
+
+Two further diagnostic scripts ship alongside the phase work, beyond the original DAG:
+`scripts/tokens.py` (deep per-plugin token / context-budget report — session tax, headroom,
+baseline delta) and `scripts/errscan.py` (runtime error/health mining from Claude Code +
+Codex session logs, per plugin/skill). `skill-curator`'s "Companion diagnostics" section
+documents how all five compose with the inventory-wide curator.
 
 ## Shared analysis core (in `skills/skill-curator/scripts/curator.py`)
 
@@ -25,7 +41,7 @@ Add graph algorithms as small pure functions with selftest cases (deterministic)
 `connected_components`, `degree_centrality`, `betweenness_centrality` (Brandes),
 `greedy_min_vertex_cover`, `find_cycles` (DFS), `in_degree`.
 
-## Phase 1 — Graph core
+## Phase 1 — Graph core — DELIVERED (`curator.py graph`, v1.2.0)
 
 New subcommand `python3 curator.py graph [--md OUT] [--dot|--mermaid] [roots…]` and
 fold a "Routing graph" section into the main `report`:
@@ -44,7 +60,7 @@ fold a "Routing graph" section into the main `report`:
 
 Selftest: add graph-algorithm cases to `curator.py selftest` (must stay green).
 
-## Phase 2 — Deterministic scoring + CI gate
+## Phase 2 — Deterministic scoring + CI gate — DELIVERED (`scripts/score.py`)
 
 New `scripts/score.py` (stdlib; may import shared helpers from validate.py) or a
 `validate.py --score` mode. Computes a **machine sub-score** for the objective parts of
@@ -65,14 +81,17 @@ only scores the judgment dimensions on top → less cross-pass variance.
 stored `.plugin-improver/score-baseline.json`, or a `--min N` floor) and fails the build
 on regression. `plugin-scaffold` seeds new plugins with the same gate.
 
-## Phase 3 — Portfolio + migration
+## Phase 3 — Portfolio + migration — portfolio DELIVERED (`scripts/portfolio.py`); `plugin-migrate` NOT built
 
-- **Portfolio sweep**: `curator.py portfolio [--md]` runs `score.py` across every
-  discovered plugin source (curator already enumerates them; never score read-only caches)
-  → ranked "fix first" leaderboard = low auto-score × high usage. Persist per-plugin score
-  history to the curator state dir so trajectories (slow rot) are visible; the report shows
-  the delta since last sweep.
-- **`plugin-migrate` (NEW 8th skill)** — dedicated skill for single→dual-harness
+- **Portfolio sweep** — **DELIVERED as `scripts/portfolio.py`** (a standalone sibling of
+  `score.py`, not a `curator.py` subcommand). Runs `score.py` across every discovered
+  plugin source (curator enumerates them; never score read-only caches) → ranked "fix
+  first" leaderboard = low auto-score × high usage. Persists per-plugin score history so
+  trajectories (slow rot) are visible; the report shows the delta since last sweep.
+- **`plugin-migrate` (NEW 8th skill)** — **NOT built in this batch.** Intentionally out of
+  scope: this batch is diagnostics/evaluation, not migration. It remains a future item —
+  do not treat it as shipped; the plugin still has seven skills. Design, unchanged, for
+  whoever builds it: a dedicated skill for single→dual-harness
   conversion. Detects a plugin shipping only `.codex-plugin/` or only `.claude-plugin/`,
   then generates the missing manifest, plus the missing per-harness surface (`commands/`
   for Claude Code, `agents/openai.yaml` for Codex), reusing `plugin-scaffold`'s
@@ -82,10 +101,11 @@ on regression. `plugin-scaffold` seeds new plugins with the same gate.
   `docs/skills/plugin-migrate.md` page, and updates: `EXPECTED_SKILLS` in validate.py,
   the README seven→eight-skill table, CHANGELOG/LEDGER.
 
-## Phase 4 — Empirical routing loop (opt-in; only phase with a model dependency)
+## Phase 4 — Empirical routing loop — DELIVERED (`scripts/route_eval.py`; opt-in, only phase with a model dependency)
 
-Makes trigger precision *measured*. Pipeline in curator.py (extends the existing
-`probes`/`probes-grade` scaffolding in `references/routing-evals.md`):
+Makes trigger precision *measured*. Delivered as `scripts/route_eval.py`, the driver that
+wraps curator's `probes`/`probes-grade` scaffolding (documented in
+`skills/skill-curator/references/routing-evals.md`):
 
 1. **Probe generation** — should-trigger probes lifted from each skill's quoted trigger
    phrases + 2–3 near-miss paraphrases per skill, **prioritized by `G_t`'s confusable
@@ -106,11 +126,14 @@ embedding k-NN graph when embeddings are available; degrade to lexical otherwise
 
 ## Build sequence & ownership
 
-1. Phase 1 (graph core) — foundational; unblocks 2, 3, 4.
-2. Phase 2 (scorer + CI) — consumes `G_t` collision count.
-3. Phase 3 (portfolio + `plugin-migrate`) — consumes the scorer.
-4. Phase 4 (routing loop) — consumes `G_t`; harness-native model; ship last, opt-in.
+1. Phase 1 (graph core) — foundational; unblocks 2, 3, 4. **Done** (`curator.py graph`, v1.2.0).
+2. Phase 2 (scorer + CI) — consumes `G_t` collision count. **Done** (`scripts/score.py`).
+3. Phase 3 (portfolio) — consumes the scorer. **Done** (`scripts/portfolio.py`).
+   `plugin-migrate` deliberately **not** built (out of scope: diagnostics, not migration).
+4. Phase 4 (routing loop) — consumes `G_t`; harness-native model; opt-in. **Done**
+   (`scripts/route_eval.py`).
 
-Each phase: keep `validate.py` and `curator.py selftest` green, bump BOTH manifests
-together, update CHANGELOG + LEDGER, `bash scripts/sync.sh`, commit, push, confirm CI.
-No existing skill renamed. Only new skill added is `plugin-migrate`.
+Follow-through for each shipped phase: keep `validate.py` and `curator.py selftest` green,
+bump BOTH manifests together, update CHANGELOG + LEDGER, `bash scripts/sync.sh`, commit,
+push, confirm CI. No existing skill was renamed. The only new skill still owed is
+`plugin-migrate`, which this diagnostics batch left as a future item.
