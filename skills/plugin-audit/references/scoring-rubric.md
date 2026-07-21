@@ -4,10 +4,11 @@ Score each dimension independently. Deduct only with concrete evidence. Half poi
 
 ## 1. Manifest integrity — 15 points
 
-- 5 — Valid JSON, kebab-case `name`, semver `version`, accurate `description`. Multi-manifest plugins (`.claude-plugin/plugin.json`, `.ncode-plugin/marketplace.json` alongside `.codex-plugin/`): versions must agree across all manifests — drift is a deduction here.
-- 4 — All component pointers (`skills`, `hooks`, `mcpServers`, `apps`) present where components exist, `./`-prefixed, inside plugin root.
-- 3 — Correct layout: only `plugin.json` in `.codex-plugin/`; components at root.
-- 3 — Publisher metadata appropriate to distribution level: `author` always; `interface.displayName`/`shortDescription` if shared; icons/legal links only if published.
+- 4 — Each present `plugin.json` is valid JSON with kebab-case `name`, semver `version`, accurate `description`.
+- 4 — Cross-harness parity: a plugin claiming dual-harness support ships BOTH `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`, with identical `name` and agreeing `version` across every manifest (ignore any Codex `+build` suffix) — a missing manifest or version drift is a deduction. A single-harness plugin earns full credit for its one valid manifest.
+- 3 — All component pointers (`skills`, `hooks`, `mcpServers`, `apps`) present where components exist, `./`-prefixed, inside plugin root.
+- 2 — Correct layout: each manifest dir holds only its `plugin.json`/`marketplace.json`; components at root.
+- 2 — Publisher metadata appropriate to distribution level: `author` always; interface `displayName`/`shortDescription` if shared; icons/legal links only if published.
 
 ## 2. Skill quality — 25 points
 
@@ -45,15 +46,15 @@ Budgets (flag, then deduct):
 If the plugin has no hooks and needs none, award 10.
 
 - 3 — Valid `hooks.json` shape: event → matcher group → handlers.
-- 3 — Contracts correct per event (see plugin-hooks skill references): Stop returns JSON on stdout; blocking uses documented shapes or exit 2 + stderr.
-- 2 — Paths use `${PLUGIN_ROOT}`; scripts exist and are executable; sensible `timeout`.
-- 2 — Hooks respect current limitations (tool events are Bash-only today; matchers ignored on UserPromptSubmit/Stop) rather than silently depending on unsupported behavior.
+- 3 — Contracts correct per event (see plugin-hooks skill references): on Codex, Stop returns JSON on stdout, blocking uses documented shapes or exit 2 + stderr.
+- 2 — Paths use `${CLAUDE_PLUGIN_ROOT}` (Codex also accepts `${PLUGIN_ROOT}`); scripts exist and are executable; sensible `timeout`.
+- 2 — Hooks respect each target harness's limits rather than silently depending on unsupported behavior: on Codex tool events are Bash-only today and matchers are ignored on UserPromptSubmit/Stop; on Claude Code matchers match all tools.
 
 ## 6. Distribution readiness — 10 points
 
-- 4 — README covers what it does, the skills it ships, and install steps.
+- 3 — README covers what it does, the skills it ships, and install steps (per targeted harness).
 - 3 — Version discipline: version bumped with changes; changelog or ledger exists if the plugin has history.
-- 3 — Marketplace entry (if any) has `policy.installation`, `policy.authentication`, `category`, and a resolvable `source.path`.
+- 4 — A marketplace entry exists for each harness the plugin targets — Claude Code `.claude-plugin/marketplace.json` and/or the Codex registration (`~/.agents/plugins/marketplace.json` or `~/.codex/config.toml [marketplaces]`) — each with `policy.installation`, `policy.authentication`, `category`, and a resolvable `source.path`. A targeted harness with no entry is a deduction.
 
 ## Grade bands
 

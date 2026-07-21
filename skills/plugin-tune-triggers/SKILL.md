@@ -1,6 +1,6 @@
 ---
 name: plugin-tune-triggers
-description: Tune skill descriptions and trigger behavior in an existing Codex plugin so each skill fires exactly when it should. Use when a skill triggers too often, never triggers, overlaps with another skill, or when asked to improve descriptions, trigger phrases, or implicit invocation. Not for rewriting a skill's body instructions.
+description: Tune skill descriptions and trigger behavior in an existing plugin so each skill fires exactly when it should. Use when a skill triggers too often, never triggers, overlaps with another skill, or when asked to improve descriptions, trigger phrases, or implicit invocation. Not for rewriting a skill's body instructions.
 ---
 
 Fix when and how the target plugin's skills trigger. Implicit invocation is driven entirely by the `description` frontmatter, so that string is the product here.
@@ -8,8 +8,8 @@ Fix when and how the target plugin's skills trigger. Implicit invocation is driv
 ## 1. Gather the trigger surface
 
 1. Collect every `description` from `skills/*/SKILL.md` in the target plugin.
-2. Also list skill names from `~/.agents/skills/` and other enabled plugins if discoverable — collisions across sources cause misfires too.
-3. Note any `agents/openai.yaml` files and their `policy.allow_implicit_invocation` values.
+2. Also list skill names from the installed skill roots (`~/.claude/skills/`, `~/.codex/skills/`) and other enabled plugins if discoverable — collisions across sources cause misfires too.
+3. On Codex, note any `agents/openai.yaml` files and their `policy.allow_implicit_invocation` values (Claude Code has no such opt-out — its triggering is description-only).
 
 ## 2. Diagnose
 
@@ -33,7 +33,7 @@ Rewrite failing descriptions using the anatomy and before/after examples in `ref
 - One negative-scope clause when a sibling skill is nearby.
 - Never grow a description to fix precision — replace vague words with specific ones.
 
-For niche, destructive, or expensive skills, set `policy.allow_implicit_invocation: false` in `agents/openai.yaml` so only explicit `$skill` invocation works.
+For niche, destructive, or expensive skills on Codex, set `policy.allow_implicit_invocation: false` in `agents/openai.yaml` so only explicit invocation works. Claude Code offers no equivalent opt-out — there, keep the description precise and negative-scoped, or ship the capability as a command instead of an auto-triggering skill.
 
 ## 5. Verify
 

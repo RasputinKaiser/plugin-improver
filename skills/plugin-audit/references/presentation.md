@@ -1,13 +1,15 @@
-# Visual presentation in the Codex app
+# Visual presentation
 
-How a plugin LOOKS on its install/detail page and in the composer. Applies to `interface` in `.codex-plugin/plugin.json` and per-skill `agents/openai.yaml`.
+How a plugin LOOKS on its install/detail page and in the composer.
 
-## Plugin-level `interface` (plugin.json)
+**Harness scope.** The `interface` block below and per-skill `agents/openai.yaml` are the **Codex-only** presentation surface — Claude Code ignores both. Claude Code reads its own display fields from `.claude-plugin/plugin.json` (`name`, `description`, `author`, `homepage`, `icon`) and renders skills from their SKILL.md frontmatter. When auditing a dual-harness plugin, check Codex presentation here and confirm the Claude Code `plugin.json` carries a clean `description`/`author`/`icon`; do not penalize a Claude-Code-only plugin for lacking `interface`/openai.yaml.
+
+## Plugin-level `interface` (Codex `.codex-plugin/plugin.json`)
 
 ```json
 "interface": {
   "displayName": "Plugin Improver",
-  "shortDescription": "Continuously improve existing Codex plugins",
+  "shortDescription": "Continuously improve existing plugins",
   "longDescription": "2–4 sentences. Renders as body copy on the detail page.",
   "developerName": "Your name",
   "category": "Developer Tools",
@@ -41,7 +43,7 @@ Craft rules:
 
 Missing icon = generic placeholder tile in the directory. For a shareable plugin, flag a missing `composerIcon` as a 🟡 finding.
 
-## Per-skill polish (`skills/<name>/agents/openai.yaml`)
+## Per-skill polish (Codex-only: `skills/<name>/agents/openai.yaml`)
 
 ```yaml
 interface:

@@ -50,7 +50,7 @@ trigger phrases users say>. <Optional: coverage nouns that aid matching>.
 
 Store the matrix in the target plugin at `.plugin-improver/trigger-matrix.md` so future passes rerun it.
 
-## Opting out of implicit invocation
+## Opting out of implicit invocation (Codex only)
 
 `skills/<name>/agents/openai.yaml`:
 
@@ -59,4 +59,4 @@ policy:
   allow_implicit_invocation: false
 ```
 
-Use for destructive operations, expensive workflows, or skills with unavoidably generic descriptions. Explicit `$skill` invocation still works.
+Use for destructive operations, expensive workflows, or skills with unavoidably generic descriptions. Explicit invocation still works. Claude Code has no equivalent flag — there, rely on a precise, negative-scoped description or ship the capability as a command.

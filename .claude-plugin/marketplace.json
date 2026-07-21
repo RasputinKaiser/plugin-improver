@@ -1,0 +1,33 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "plugin-improver",
+  "description": "Single-plugin marketplace for plugin-improver: audit, tune, and evolve Claude Code and Codex plugins, and curate the whole skill+plugin inventory.",
+  "owner": {
+    "name": "RasputinKaiser",
+    "url": "https://github.com/RasputinKaiser"
+  },
+  "plugins": [
+    {
+      "name": "plugin-improver",
+      "description": "Audit, tune, and evolve Claude Code and Codex plugins - and curate the whole skill+plugin inventory: score plugin health, sharpen trigger descriptions, repair lifecycle hooks, run non-regressing improvement passes, and detect skill sprawl, trigger collisions, duplicate installs, and plugin version drift across Claude Code and Codex.",
+      "author": {
+        "name": "RasputinKaiser",
+        "url": "https://github.com/RasputinKaiser"
+      },
+      "category": "development",
+      "source": ".",
+      "homepage": "https://github.com/RasputinKaiser/plugin-improver",
+      "license": "MIT",
+      "keywords": [
+        "plugins",
+        "meta",
+        "audit",
+        "hooks",
+        "skills",
+        "quality",
+        "curation",
+        "sprawl"
+      ]
+    }
+  ]
+}

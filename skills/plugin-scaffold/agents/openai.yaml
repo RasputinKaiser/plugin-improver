@@ -1,0 +1,5 @@
+interface:
+  display_name: "Plugin Scaffold"
+  short_description: "Create a new dual-harness plugin"
+  brand_color: "#5B8DEF"
+  default_prompt: "Scaffold a new dual-harness plugin and show me how to install it"

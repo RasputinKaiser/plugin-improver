@@ -1,6 +1,6 @@
 ---
 name: plugin-improve
-description: Run a disciplined improvement pass on an existing Codex plugin - audit, apply the highest-leverage fixes, verify nothing regressed, and keep context cost flat. Use when asked to improve, polish, upgrade, evolve, iterate on, or "make better" a plugin, including recurring maintenance passes. Not for first-time plugin creation or one-off hook fixes.
+description: Run a disciplined improvement pass on an existing plugin (Claude Code and/or Codex) - audit, apply the highest-leverage fixes, verify nothing regressed, and keep context cost flat. Use when asked to improve, polish, upgrade, evolve, iterate on, or "make better" a plugin, including recurring maintenance passes. Not for first-time plugin creation (use plugin-scaffold) or one-off hook fixes.
 ---
 
 Improve the target plugin in one bounded, verifiable pass. The contract: every pass leaves the plugin measurably better, never behaviorally worse, and never heavier in context than it needs to be.
@@ -26,14 +26,14 @@ Hard rules while editing:
 
 ### 4. Verify — the non-regression gate
 
-Work through `references/regression-checklist.md` completely (if missing: verify identity unchanged, manifests parse, frontmatter valid, context budgets held — never skip verification silently). Then re-score with the audit rubric. Ship only if: new total ≥ baseline total, no dimension dropped more than 2 points, and the context budget held. Any failure → revert the offending change, not the whole pass.
+Work through `references/regression-checklist.md` completely (if missing: verify identity unchanged, manifests parse, frontmatter valid, context budgets held — never skip verification silently). If the plugin ships `scripts/validate.py`, run it (`python3 scripts/validate.py`) — a red validator blocks the pass. Then re-score with the audit rubric. Ship only if: new total ≥ baseline total, no dimension dropped more than 2 points, and the context budget held. Any failure → revert the offending change, not the whole pass.
 
 ### 5. Record
 
-- Bump `version` in `.codex-plugin/plugin.json`: patch for fixes/wording, minor for new capability, major for anything breaking (renames, removed skills, changed hook behavior). Multi-manifest plugins drift: if `.claude-plugin/plugin.json` or `.ncode-plugin/marketplace.json` exist, sync them too (run the plugin's build script if it has one).
+- Bump `version` in EVERY plugin manifest together — `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json` (whichever exist) plus any marketplace entry — keeping them in agreement (ignore any Codex `+build` suffix). Drift between manifests is itself a regression. patch for fixes/wording, minor for new capability, major for anything breaking (renames, removed skills, changed hook behavior). If the plugin has a build/sync script, run it. To package and publish the bumped plugin, hand off to `plugin-release`.
 - Append to `<plugin-root>/LEDGER.md`: date, version, changes with rationale, score before → after, context delta in words, anything deliberately NOT done and why.
 - Overwrite `.plugin-improver/baseline.json` with the new state.
-- Remind the user: restart Codex (or refresh the local marketplace install) to pick up changes.
+- Remind the user to refresh the install so changes take effect: restart the harness or refresh the local marketplace install (`~/.claude/plugins/` or `~/.codex/plugins/`).
 
 ## Report format
 

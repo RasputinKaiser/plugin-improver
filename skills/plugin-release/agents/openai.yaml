@@ -1,0 +1,5 @@
+interface:
+  display_name: "Plugin Release"
+  short_description: "Package and publish a plugin to both marketplaces"
+  brand_color: "#5B8DEF"
+  default_prompt: "Package this plugin for release and prepare both marketplace entries"

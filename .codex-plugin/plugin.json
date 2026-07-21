@@ -1,7 +1,7 @@
 {
   "name": "plugin-improver",
-  "version": "0.4.0+codex.20260720201503",
-  "description": "Audit, tune, and evolve Codex plugins - and curate the whole skill+plugin inventory: score plugin health, sharpen trigger descriptions, repair lifecycle hooks, run non-regressing improvement passes, and detect skill sprawl, trigger collisions, duplicate installs, and plugin version drift across Codex and Claude.",
+  "version": "1.0.0+codex.20260720201503",
+  "description": "Audit, tune, and evolve Claude Code and Codex plugins - and curate the whole skill+plugin inventory: score plugin health, sharpen trigger descriptions, repair lifecycle hooks, run non-regressing improvement passes, and detect skill sprawl, trigger collisions, duplicate installs, and plugin version drift across Claude Code and Codex.",
   "author": {
     "name": "RasputinKaiser",
     "url": "https://github.com/RasputinKaiser"
@@ -36,7 +36,9 @@
       "Use $plugin-improve to run one improvement pass on my plugin.",
       "Use $plugin-hooks to add a SessionStart hook to my plugin.",
       "Use $plugin-tune-triggers to fix a skill that never fires.",
-      "Use $skill-curator to find sprawl, collisions, and version drift across my skills and plugins."
+      "Use $skill-curator to find sprawl, collisions, and version drift across my skills and plugins.",
+      "Use $plugin-scaffold to create a new dual-harness plugin from scratch.",
+      "Use $plugin-release to package and publish my plugin to both marketplaces."
     ]
   }
 }

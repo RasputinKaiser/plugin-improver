@@ -26,7 +26,7 @@ Bars: 10 chars wide, `█` per 10%, `▌` for half, `░` fill. Always same widt
 One line each, severity-tagged, evidence in backticks, fix after the arrow:
 
 ```
-🔴 HIGH `skills/deploy/SKILL.md:3` description claims same prompts as $release → add NOT-clause
+🔴 HIGH `skills/deploy/SKILL.md:3` description claims same prompts as `release` → add NOT-clause
 🟡 MED  `hooks/hooks.json` Stop hook prints plain text → emit JSON only
 🟢 LOW  README missing install steps → add marketplace snippet
 ```
@@ -36,7 +36,7 @@ Severity: 🔴 breaks behavior, 🟡 degrades quality, 🟢 cosmetic. Sort 🔴�
 ## Before/after (trigger tuning)
 
 ```
-### $deploy — fixed: never fired on "ship it" (S3), stole "release notes" (N2)
+### deploy — fixed: never fired on "ship it" (S3), stole "release notes" (N2)
 - Before (61 chars): `Helps with deployments.`
 + After (142 chars): `Deploy this repo to staging or production. Use when asked to deploy, ship, or roll back. Not for release notes.`
 ```
@@ -45,7 +45,7 @@ Always show char counts and which matrix cases the rewrite fixes.
 
 ## Improvement pass summary
 
-End every $plugin-improve pass with exactly this block:
+End every `plugin-improve` pass with exactly this block:
 
 ```
 ## Pass complete: v0.1.0 → v0.1.1

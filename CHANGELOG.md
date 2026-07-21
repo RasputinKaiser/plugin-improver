@@ -1,5 +1,24 @@
 # Changelog
 
+All notable changes to this project are documented here. Format follows
+[Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
+
+## 1.0.0 - 2026-07-20
+
+### Added
+- **Dual-harness support.** plugin-improver now runs on **both Claude Code and Codex** from one shared `skills/` tree. Added the Claude Code plugin manifest (`.claude-plugin/plugin.json`) and single-plugin marketplace (`.claude-plugin/marketplace.json`) alongside the existing Codex manifest.
+- **`plugin-scaffold`** — creates a NEW dual-harness plugin from scratch: canonical layout, both manifests with agreeing versions, a starter skill, and per-harness install steps.
+- **`plugin-release`** — packages and publishes an existing plugin to both marketplaces: version/changelog checks, a marketplace entry for each targeted harness, a git-tag suggestion, and a post-publish install-refresh reminder.
+- **Validator + CI.** `scripts/validate.py` (stdlib only) checks manifest agreement, skill frontmatter and body budgets, reference-link integrity, per-skill Codex interfaces, cross-harness parity, and asset paths. `.github/workflows/ci.yml` runs it on every push and pull request.
+- **Docs.** Open-source README, `docs/architecture.md`, and one page per skill under `docs/skills/`.
+
+### Changed
+- **Repo-ification.** Restructured for a public MIT release at `github.com/RasputinKaiser/plugin-improver`.
+- Existing skill bodies, descriptions, and the audit rubric now read as harness-neutral and credit cross-harness parity (both manifests present with agreeing versions; a marketplace entry per targeted harness), keeping the audit total at 100.
+
+### Notes
+- This release **does not rename or remove any existing skill**. `plugin-audit`, `plugin-hooks`, `plugin-improve`, `plugin-tune-triggers`, and `skill-curator` keep their names and identifiers.
+
 ## 0.4.0 - 2026-07-20
 
 - Merged skill-curator into the plugin as a fifth skill (was a standalone skill duplicated across both user-level skill stores).

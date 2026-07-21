@@ -1,5 +1,28 @@
 # Improvement ledger — plugin-improver
 
+## 2026-07-20 — 0.4.0 → 1.0.0 (dual-harness rebuild, planner + parallel Opus workers)
+- Made the plugin genuinely dual-harness (Claude Code + Codex) from one shared
+  `skills/` tree. Added `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`;
+  bumped both manifests to an agreeing `1.0.0` semver.
+- All five existing skill bodies rewritten to be harness-neutral and correct on both:
+  locate a plugin by `.claude-plugin/` OR `.codex-plugin/`; portable `${CLAUDE_PLUGIN_ROOT}`;
+  plugin-hooks now presents hook capability per harness (Claude matches all tools + on by
+  default vs Codex Bash-only + experimental flag + trust); scoring-rubric gained a
+  cross-harness parity requirement inside Manifest integrity + Distribution (100-pt total
+  unchanged). No skill `name` changed.
+- Two new skills: `plugin-scaffold` (create a new dual-harness plugin) and `plugin-release`
+  (package + publish to both marketplaces; prepares everything, hands the final tag/push to
+  the user). Each ships `agents/openai.yaml` + a reference file.
+- New engineering surface: `scripts/validate.py` (stdlib-only, 7-check registry: manifests
+  parse & agree, frontmatter, body budgets, reference integrity, Codex openai.yaml, parity,
+  assets), `scripts/sync.sh` (install to both harnesses), `.github/workflows/ci.yml` (runs
+  the validator on push + PR). MIT LICENSE, CONTRIBUTING, first-class dual-install README,
+  `docs/` (architecture + per-skill pages).
+- Verification: validator 7/7, curator selftest 69/69, identity scan clean (RasputinKaiser
+  only). Structured as a public repo at github.com/RasputinKaiser/plugin-improver.
+- Deliberately NOT done: no skill removed/renamed; no heavyweight test framework beyond the
+  validator; live installs left untouched until `scripts/sync.sh` is run.
+
 ## 2026-07-07 — 0.3.1 → 0.3.2 (pass by Claude/Cowork)
 - plugin-improve: failure-handling fallbacks for missing scoring-rubric.md /
   regression-checklist.md (inline six-dimension scores; minimal verify list).

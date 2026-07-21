@@ -11,11 +11,11 @@ Run every item after applying changes, before re-scoring. An unchecked item bloc
 
 ## Mechanics
 
-- [ ] `.codex-plugin/plugin.json` parses; `version` bumped and still semver.
+- [ ] Every plugin manifest present (`.claude-plugin/plugin.json`, `.codex-plugin/plugin.json`) parses; `version` bumped, still semver, and agreeing across all manifests (ignore any Codex `+build` suffix).
 - [ ] All manifest paths still `./`-prefixed, resolve, and stay inside the plugin root.
 - [ ] Every `SKILL.md` still has valid frontmatter with `name` and `description`.
 - [ ] `hooks.json` and `.mcp.json` (if present) still parse; hook scripts exist at their referenced paths and pass a sample-payload test.
-- [ ] If the plugin ships tests or a build script, RUN them (pytest, build.sh, validators). A "verified"/"green" claim in `state.yaml`, `LEDGER.md`, or a prior baseline is not evidence — a red suite hid behind a green state claim (2026-07-13).
+- [ ] If the plugin ships tests, a build script, or `scripts/validate.py`, RUN them (`python3 scripts/validate.py`, pytest, build.sh). A "verified"/"green" claim in `state.yaml`, `LEDGER.md`, or a prior baseline is not evidence — a red suite hid behind a green state claim (2026-07-13).
 - [ ] Verify artifact CONTENT, not exit banners: a copy step that "succeeded" shipped an unmodified file when a permissions error was swallowed mid-pipeline (2026-07-13).
 
 ## Behavior
