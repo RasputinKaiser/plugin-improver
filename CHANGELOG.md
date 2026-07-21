@@ -3,6 +3,11 @@
 All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## 1.2.0 - 2026-07-20
+
+### Added
+- **Routing graph (roadmap Phase 1).** `skill-curator` now models the inventory as two graphs: a trigger-collision graph (weighted edges from shared trigger phrases + description overlap) and a directed reference/handoff graph. New `curator.py graph [--md|--mermaid|--dot|--json]` subcommand and a folded summary in `report` surface: collision clusters, **centrality-ranked trigger-hogs** (which skill steals prompts from the most siblings), a **minimal-edit set** (which K descriptions to fix to break the most collisions), and orphan skills / broken handoffs / cycles from the reference graph. Stdlib only; 14 new deterministic selftests (69 → 83).
+
 ## 1.1.1 - 2026-07-20
 
 ### Changed

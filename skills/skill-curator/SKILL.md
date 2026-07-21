@@ -34,7 +34,10 @@ what's new.
    - `collision_clusters` — topic groups competing for the same triggers. Phrase-backed
      clusters (identical quoted trigger phrases) are the most dangerous. Fix by sharpening
      descriptions (see plugin-tune-triggers), verify with routing probes
-     (`references/routing-evals.md`); merge only as a last resort.
+     (`references/routing-evals.md`); merge only as a last resort. `report` folds in a
+     Routing-graph summary; `python3 scripts/curator.py graph --md ROUTING.md`
+     (`--mermaid`/`--dot` to export) is the full map — trigger-hogs, minimal-edit set,
+     reference orphans/broken-handoffs/cycles (`references/routing-evals.md`).
    - `near_dupes` / `families` — merge candidates. Diff both bodies before proposing;
      a family split can be deliberate context economy.
    - `prune_candidates` — never-referenced skills ranked by per-session trigger cost.

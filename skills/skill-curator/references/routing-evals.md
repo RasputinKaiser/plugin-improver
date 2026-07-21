@@ -3,6 +3,32 @@
 Loaded on demand from SKILL.md. Lexical collisions are hypotheses; confusion is
 measured by routing probes.
 
+## Routing graph (`curator.py graph`)
+
+`python3 scripts/curator.py graph [--md OUT] [--mermaid|--dot] [--json] [roots…]`
+builds two stdlib-only graphs over the same skill records and reports on them
+(`report` folds a compact summary of the same data into its output):
+
+- **G_t** — undirected weighted trigger-collision graph. An edge is drawn only
+  on a genuine collision (shared quoted phrase, ≥3 distinctive shared terms plus
+  a shared bigram, ≥6 distinctive terms, or a near-duplicate); the weight blends
+  shared phrases + description-token Jaccard + shared distinctive nouns, and each
+  edge records WHY. `connected_components` gives **collision clusters** (fingerprints
+  use the same `coll-` scheme as `report`, so `decide`/`archive` keep working and
+  ledger-rejected clusters stay hidden). **Trigger-hogs** rank by betweenness
+  (Brandes) + degree — the skills bridging the most topic groups are the
+  highest-value descriptions to sharpen. The **minimal-edit set**
+  (`greedy_min_vertex_cover`) names the K descriptions whose edits remove every
+  collision edge.
+- **G_r** — directed reference/handoff graph. Edge a→b when a's description or
+  SKILL.md body references b by name (distinctive names only) or by a relative
+  path resolving into b's dir (fenced code stripped, like validate.py). Surfaces
+  **orphans** (no handoff in or out), **broken handoffs** (referenced file
+  missing — same signal as validate.py's reference check), and **cycles** (DFS).
+
+`--mermaid`/`--dot` emit a text graph of G_t viewable with no dependency; `--all`
+includes ledger-hidden clusters.
+
 ## Routing probes (behavioral, not just lexical)
 
 1. `python3 scripts/curator.py probes --only <member> --only <member> --out-dir /tmp/probes`

@@ -1,5 +1,21 @@
 # Improvement ledger — plugin-improver
 
+## 2026-07-20 — 1.1.1 → 1.2.0 (roadmap Phase 1: routing graph in skill-curator)
+- Implemented the graph core from docs/ROADMAP-measurement-graph.md: `build_trigger_graph`
+  (G_t, undirected weighted) and `build_reference_graph` (G_r, directed) plus stdlib graph
+  algorithms (connected_components, degree/betweenness centrality via Brandes,
+  greedy_min_vertex_cover, find_cycles, in_degree). New `curator.py graph` subcommand
+  (--md/--mermaid/--dot/--json) + a compact routing-graph summary folded into `report`.
+- Worker (Opus) reused analyze()'s proven collision predicate for edge-gating after a naive
+  Jaccard threshold collapsed the 280-skill inventory into one blob — good call; centrality
+  still ranks the real hubs (hyperframes, motion-graphics top by betweenness). Collision
+  fingerprints kept compatible with the decision ledger so decide/archive still work.
+- Verify: curator selftest 69 → 83 (all green, incl. a hand-verified Brandes betweenness
+  case), validate.py 8/8, graph runs clean on the real inventory (280 skills, 314 edges,
+  22 clusters, 90 orphans, 203 broken handoffs, 75 cycles — spot-checked one as a real find).
+  SKILL.md body 588w (≤600). Minor bump (new capability). Next: Phase 2 (deterministic
+  scorer + CI gate), which consumes G_t's collision count.
+
 ## 2026-07-20 — 1.1.0 → 1.1.1 (sync.sh auto-installs on Claude Code)
 - `scripts/sync.sh` now performs the Claude Code marketplace add/install/update via the
   `claude` plugin CLI (idempotent; prints the interactive fallback if the CLI is missing),

@@ -654,6 +654,431 @@ def analyze(skills, jaccard_min=0.55, family_min=3, desc_warn=1500):
     return findings
 
 
+# --- graph core (Phase 1) ---------------------------------------------------
+# Two graphs over the same skill records analyze() already builds:
+#   G_t  undirected weighted trigger-collision graph (who competes for triggers)
+#   G_r  directed reference/handoff graph (who hands off to whom)
+# plus small stdlib-only graph algorithms with deterministic output. Graphs are
+# plain adjacency dicts: {node: {neighbor: edge_data}} (no third-party libs).
+
+# relative in-repo link tokens in a body (mirrors validate.py's REF_TOKEN): the
+# lookbehind requires a path boundary so absolute/home paths are not matched.
+REF_PATH_RE = re.compile(
+    r"(?<![\w/~.-])(?:\.\./[\w./-]+|references/[\w./-]+|scripts/[\w./-]+"
+    r"|assets/[\w./-]+)\.\w+")
+FENCE_RE = re.compile(r"```.*?```", re.S)  # fenced blocks hold example paths
+
+
+def _unique_described(skills):
+    out, seen = [], set()
+    for s in skills:
+        if s["description"] and s["name"] not in seen:
+            out.append(s)
+            seen.add(s["name"])
+    return out
+
+
+def build_trigger_graph(skills, alpha=0.6, beta=1.0, gamma=0.08, threshold=0.0):
+    """Undirected weighted trigger-collision graph G_t.
+
+    Nodes = skill names. An edge is drawn only when two descriptions genuinely
+    collide, using the SAME precision gate as analyze() (a shared identical
+    quoted trigger phrase, OR >=3 distinctive shared terms plus a shared bigram,
+    OR >=6 distinctive shared terms, OR a near-duplicate) — a loose Jaccard cut
+    would collapse the whole inventory into one blob under connected_components.
+    Edge weight blends shared phrases (alpha), description-token Jaccard (beta),
+    and shared distinctive coverage nouns (gamma) for ranking; `threshold` is an
+    optional extra floor on that weight. Each edge records WHY (shared
+    phrases/terms) so reports stay explainable. Reuses phrases()/tokens()/
+    bigrams() and analyze()'s distinctiveness gate.
+    """
+    described = _unique_described(skills)
+    names = [s["name"] for s in described]
+    tsets = {s["name"]: tokens(s["description"]) for s in described}
+    bsets = {s["name"]: bigrams(s["description"]) for s in described}
+    psets = {s["name"]: phrases(s["description"]) for s in described}
+    shas = {s["name"]: s["body_sha"] for s in described}
+    df = {}
+    for ts in tsets.values():
+        for t in ts:
+            df[t] = df.get(t, 0) + 1
+    n = len(described)
+    distinctive_max = max(3, min(24, int(n * 0.25))) if n else 0
+    adj = {nm: {} for nm in names}
+    edges = []
+    for i in range(n):
+        a, ta = names[i], tsets[names[i]]
+        if not ta:
+            continue
+        for j in range(i + 1, n):
+            b, tb = names[j], tsets[names[j]]
+            if not tb:
+                continue
+            jac = len(ta & tb) / len(ta | tb)
+            shared_ph = sorted(psets[a] & psets[b])
+            shared_bi = bsets[a] & bsets[b]
+            shared_terms = sorted(t for t in ta & tb
+                                  if df.get(t, 0) <= distinctive_max)
+            near = jac >= 0.55 or (shas[a] and shas[a] == shas[b])
+            collides = (near or shared_ph or
+                        (len(shared_terms) >= 3 and shared_bi) or
+                        len(shared_terms) >= 6)
+            if not collides:
+                continue
+            w = alpha * len(shared_ph) + beta * jac + gamma * len(shared_terms)
+            if w < threshold:
+                continue
+            data = {"weight": round(w, 4), "shared_phrases": shared_ph[:4],
+                    "shared_terms": shared_terms[:8], "near_dupe": bool(near)}
+            adj[a][b] = data
+            adj[b][a] = data  # undirected: same edge object both ways
+            edges.append((a, b, data))
+    return {"nodes": names, "adj": adj, "edges": edges}
+
+
+def build_reference_graph(skills):
+    """Directed reference/handoff graph G_r.
+
+    Edge a->b when skill a's description or SKILL.md body references skill b by
+    name (distinctive names only, so short common-word names like doc/run/pdf
+    don't match prose) or by a relative path that resolves into b's directory.
+    Also collects broken path links (a handoff whose target file is missing).
+    """
+    recs, seen = [], set()
+    for s in skills:
+        if s["name"] in seen:
+            continue
+        seen.add(s["name"])
+        recs.append(s)
+    names = sorted(r["name"] for r in recs)
+    realdir = {r["name"]: os.path.realpath(r["path"]) for r in recs}
+    text_of = {}
+    for r in recs:
+        body = ""
+        try:
+            with open(os.path.join(r["path"], "SKILL.md"),
+                      encoding="utf-8", errors="replace") as f:
+                body = f.read()
+        except OSError:
+            body = ""
+        # drop fenced code blocks: paths/names inside them are illustrative
+        # templates, not real links (mirrors validate.py's link check)
+        text_of[r["name"]] = ((r.get("description", "") or "") + "\n"
+                              + FENCE_RE.sub("", body))
+    # distinctive = kebab-compound (has '-') or >= 8 chars; single short words
+    # are too common in prose to be reliable references
+    distinctive = {nm: re.compile(r"(?<![\w-])" + re.escape(nm) + r"(?![\w-])")
+                   for nm in names if ("-" in nm or len(nm) >= 8)}
+    adj = {nm: {} for nm in names}
+    broken = []
+    for a in sorted(names):
+        text, adir = text_of[a], realdir[a]
+        for b, pat in distinctive.items():
+            if b != a and pat.search(text):
+                e = adj[a].setdefault(b, {"why": []})
+                if "name" not in e["why"]:
+                    e["why"].append("name")
+        for tok in sorted(set(REF_PATH_RE.findall(text))):
+            if not (os.path.exists(os.path.join(adir, tok)) or
+                    os.path.exists(os.path.realpath(os.path.join(adir, tok)))):
+                broken.append({"skill": a, "link": tok})
+                continue
+            resolved = os.path.realpath(os.path.join(adir, tok))
+            for b in names:
+                if b == a:
+                    continue
+                bdir = realdir[b]
+                if resolved == bdir or resolved.startswith(bdir + os.sep):
+                    e = adj[a].setdefault(b, {"why": []})
+                    if "path" not in e["why"]:
+                        e["why"].append("path")
+    return {"nodes": names, "adj": adj, "broken": broken}
+
+
+def connected_components(adj):
+    """Undirected components of an adjacency dict. Deterministic order."""
+    seen, comps = set(), []
+    for start in sorted(adj):
+        if start in seen:
+            continue
+        stack, comp = [start], []
+        seen.add(start)
+        while stack:
+            u = stack.pop()
+            comp.append(u)
+            for v in sorted(adj[u]):
+                if v not in seen:
+                    seen.add(v)
+                    stack.append(v)
+        comps.append(sorted(comp))
+    return sorted(comps)
+
+
+def degree_centrality(adj):
+    """Fraction of other nodes each node is adjacent to."""
+    n = len(adj)
+    if n <= 1:
+        return {u: 0.0 for u in adj}
+    return {u: len(adj[u]) / (n - 1) for u in adj}
+
+
+def betweenness_centrality(adj, normalized=True):
+    """Shortest-path betweenness (Brandes' algorithm), unweighted, undirected."""
+    from collections import deque
+    nodes = list(adj)
+    cb = {v: 0.0 for v in nodes}
+    for s in nodes:
+        stack, pred = [], {w: [] for w in nodes}
+        sigma = {w: 0 for w in nodes}
+        sigma[s] = 1
+        dist = {w: -1 for w in nodes}
+        dist[s] = 0
+        q = deque([s])
+        while q:
+            v = q.popleft()
+            stack.append(v)
+            for w in adj[v]:
+                if dist[w] < 0:
+                    dist[w] = dist[v] + 1
+                    q.append(w)
+                if dist[w] == dist[v] + 1:
+                    sigma[w] += sigma[v]
+                    pred[w].append(v)
+        delta = {w: 0.0 for w in nodes}
+        while stack:
+            w = stack.pop()
+            for v in pred[w]:
+                delta[v] += (sigma[v] / sigma[w]) * (1 + delta[w])
+            if w != s:
+                cb[w] += delta[w]
+    for v in cb:
+        cb[v] /= 2.0  # undirected: each path counted from both endpoints
+    if normalized and len(nodes) > 2:
+        scale = 2.0 / ((len(nodes) - 1) * (len(nodes) - 2))
+        for v in cb:
+            cb[v] *= scale
+    return cb
+
+
+def greedy_min_vertex_cover(edges):
+    """Greedy vertex cover: repeatedly take the highest-degree vertex until no
+    edge is left. Returns the cover in selection order (deterministic)."""
+    remaining = set()
+    for a, b in edges:
+        if a != b:
+            remaining.add((a, b) if a <= b else (b, a))
+    cover = []
+    while remaining:
+        deg = {}
+        for a, b in remaining:
+            deg[a] = deg.get(a, 0) + 1
+            deg[b] = deg.get(b, 0) + 1
+        best = max(sorted(deg), key=lambda v: deg[v])
+        cover.append(best)
+        remaining = {e for e in remaining if best not in e}
+    return cover
+
+
+def in_degree(adj):
+    """In-degree per node for a directed adjacency dict."""
+    indeg = {u: 0 for u in adj}
+    for u in adj:
+        for v in adj[u]:
+            indeg[v] = indeg.get(v, 0) + 1
+    return indeg
+
+
+def find_cycles(adj):
+    """Directed cycles via DFS (back edges). Each cycle canonicalized (rotated
+    to its smallest node) and de-duplicated. Deterministic order."""
+    WHITE, GRAY, BLACK = 0, 1, 2
+    color = {u: WHITE for u in adj}
+    cycles, seen_keys = [], set()
+
+    def canon(cyc):
+        m = cyc.index(min(cyc))
+        return tuple(cyc[m:] + cyc[:m])
+
+    def dfs(u, stack):
+        color[u] = GRAY
+        stack.append(u)
+        for v in sorted(adj.get(u, ())):
+            c = color.get(v, WHITE)
+            if c == GRAY:
+                key = canon(stack[stack.index(v):])
+                if key not in seen_keys:
+                    seen_keys.add(key)
+                    cycles.append(list(key))
+            elif c == WHITE:
+                dfs(v, stack)
+        stack.pop()
+        color[u] = BLACK
+
+    for u in sorted(adj):
+        if color[u] == WHITE:
+            dfs(u, [])
+    return cycles
+
+
+def routing_graph_findings(gt, gr, ledger=None, show_all=False):
+    """Assemble the Phase-1 routing-graph report from G_t and G_r."""
+    adj = gt["adj"]
+    from collections import Counter
+    comps = [c for c in connected_components(adj) if len(c) >= 2]
+    clusters = []
+    for comp in comps:
+        members, mset = sorted(comp), set(comp)
+        eterms, phr, ecount, freq = [], set(), 0, Counter()
+        for a, b, data in gt["edges"]:
+            if a in mset and b in mset:
+                eterms.append(set(data["shared_terms"]))
+                freq.update(data["shared_terms"])
+                phr.update(data["shared_phrases"])
+                ecount += 1
+        core = sorted(set.intersection(*eterms)) if eterms else []
+        # core is the intersection across ALL edges (empty for big bridged
+        # components); fall back to the most common edge terms for display.
+        display = core[:8] if core else [t for t, _ in freq.most_common(8)]
+        clusters.append({  # same fingerprint scheme as analyze()'s clusters
+            "fp": fingerprint("coll", "|".join(members) + "#" + "|".join(core)),
+            "members": members, "shared_terms": display,
+            "shared_phrases": sorted(phr)[:4], "phrase_backed": bool(phr),
+            "edges": ecount})
+    clusters.sort(key=lambda c: (-len(c["members"]), c["members"]))
+    hidden = 0
+    if ledger is not None:
+        now, kept = time.time(), []
+        for c in clusters:
+            d = active_decision(ledger, c["fp"], now)
+            if d:
+                c["decision"] = d["decision"]
+                if d.get("note"):
+                    c["decision_note"] = d["note"]
+            if d and d["decision"] in ("rejected", "snoozed") and not show_all:
+                hidden += 1
+                continue
+            kept.append(c)
+        clusters = kept
+
+    bet = betweenness_centrality(adj, normalized=True)
+    deg = degree_centrality(adj)
+    wdeg = {u: round(sum(d["weight"] for d in adj[u].values()), 3) for u in adj}
+    hogs = sorted(
+        ({"name": u, "betweenness": round(bet[u], 4), "degree": round(deg[u], 4),
+          "siblings": len(adj[u]), "weighted_degree": wdeg[u]}
+         for u in adj if adj[u]),
+        key=lambda r: (-r["betweenness"], -r["weighted_degree"], r["name"]))
+
+    edge_pairs = [(a, b) for a, b, _ in gt["edges"]]
+    cover = greedy_min_vertex_cover(edge_pairs)
+
+    radj = gr["adj"]
+    indeg = in_degree(radj)
+    outdeg = {u: len(radj[u]) for u in radj}
+    orphans = sorted(u for u in radj if indeg[u] == 0 and outdeg[u] == 0)
+    cycles = find_cycles(radj)
+    handoffs = []
+    for u in sorted(radj):
+        for v, data in sorted(radj[u].items()):
+            handoffs.append({"from": u, "to": v, "why": data["why"]})
+    return {
+        "node_count": len(gt["nodes"]), "edge_count": len(edge_pairs),
+        "ref_edge_count": sum(outdeg.values()),
+        "collision_clusters": clusters, "hidden_by_ledger": hidden,
+        "trigger_hogs": hogs[:12],
+        "min_edit_set": {"cover": cover, "k": len(cover),
+                         "edges_removed": len(edge_pairs),
+                         "total_edges": len(edge_pairs)},
+        "handoffs": handoffs, "orphans": orphans,
+        "broken_handoffs": gr["broken"], "cycles": cycles,
+    }
+
+
+def _mermaid_id(name, ids):
+    return ids.setdefault(name, "n%d" % len(ids))
+
+
+def graph_to_mermaid(gt):
+    """Text Mermaid of G_t (no dependency needed to view)."""
+    ids, L = {}, ["graph LR"]
+    for a, b, data in gt["edges"]:
+        L.append(f'  {_mermaid_id(a, ids)}["{a}"] ---|{data["weight"]}| '
+                 f'{_mermaid_id(b, ids)}["{b}"]')
+    for a in gt["nodes"]:
+        if not gt["adj"][a]:
+            L.append(f'  {_mermaid_id(a, ids)}["{a}"]')
+    return "\n".join(L)
+
+
+def graph_to_dot(gt):
+    """Text Graphviz DOT of G_t."""
+    L = ["graph Gt {"]
+    for a, b, data in gt["edges"]:
+        L.append(f'  "{a}" -- "{b}" [label="{data["weight"]}"];')
+    for a in gt["nodes"]:
+        if not gt["adj"][a]:
+            L.append(f'  "{a}";')
+    L.append("}")
+    return "\n".join(L)
+
+
+def render_graph_md(gf):
+    L = ["# Routing graph", "",
+         f"- G_t: {gf['node_count']} skills, {gf['edge_count']} collision edges "
+         f"in {len(gf['collision_clusters'])} clusters",
+         f"- G_r: {gf['ref_edge_count']} reference/handoff edges", ""]
+    if gf.get("hidden_by_ledger"):
+        L.append(f"- ledger: {gf['hidden_by_ledger']} cluster(s) hidden "
+                 "(rejected/snoozed); --all to show")
+        L.append("")
+    L.append(f"## Collision clusters ({len(gf['collision_clusters'])})")
+    L.append("")
+    for c in gf["collision_clusters"]:
+        ph = (f"; PHRASES: {'; '.join(c['shared_phrases'])}"
+              if c["shared_phrases"] else "")
+        dec = f" [{c['decision']}]" if c.get("decision") else ""
+        L.append(f"- [{c['fp']}]{dec} {', '.join(c['members'])} "
+                 f"({c['edges']} edges) — shared: "
+                 f"{', '.join(c['shared_terms'][:6]) or '(phrase-only)'}{ph}")
+    L.append("")
+    L.append("## Trigger hogs (betweenness · degree)")
+    L.append("")
+    for h in gf["trigger_hogs"]:
+        L.append(f"- {h['name']}: betweenness {h['betweenness']}, "
+                 f"{h['siblings']} colliding siblings "
+                 f"(weighted degree {h['weighted_degree']})")
+    if not gf["trigger_hogs"]:
+        L.append("- (no collision edges)")
+    L.append("")
+    m = gf["min_edit_set"]
+    L.append("## Minimal-edit set")
+    L.append("")
+    if m["cover"]:
+        L.append(f"Editing these {m['k']} description(s) removes "
+                 f"{m['edges_removed']} of {m['total_edges']} collision edges:")
+        L.append("")
+        L.append("- " + ", ".join(m["cover"]))
+    else:
+        L.append("No collision edges — nothing to cover.")
+    L.append("")
+    L.append("## Reference graph")
+    L.append("")
+    L.append(f"- orphans (in/out degree 0, no handoff either way): "
+             f"{len(gf['orphans'])}")
+    if gf["orphans"]:
+        L.append("  - " + ", ".join(gf["orphans"][:30])
+                 + (" ..." if len(gf["orphans"]) > 30 else ""))
+    L.append(f"- broken handoffs (reference target missing): "
+             f"{len(gf['broken_handoffs'])}")
+    for b in gf["broken_handoffs"][:20]:
+        L.append(f"  - {b['skill']}: {b['link']}")
+    L.append(f"- cycles: {len(gf['cycles'])}")
+    for cyc in gf["cycles"][:20]:
+        L.append("  - " + " -> ".join(cyc + [cyc[0]]))
+    L.append("")
+    return "\n".join(L)
+
+
 # --- economics --------------------------------------------------------------
 
 def apply_economics(findings, skills):
@@ -1067,6 +1492,26 @@ def render_md(findings):
                 L.append(f"- {name}: {u['refs']} refs / {u['sessions']} sessions "
                          f"({by}), last seen {u['last_seen']}")
         L.append("")
+    rg = findings.get("routing_graph")
+    if rg:
+        L.append("## Routing graph")
+        L.append("")
+        L.append(f"- G_t: {rg['node_count']} skills, {rg['edge_count']} "
+                 f"collision edges in {len(rg['collision_clusters'])} clusters")
+        if rg["trigger_hogs"]:
+            top = rg["trigger_hogs"][0]
+            L.append(f"- top trigger-hog: {top['name']} (betweenness "
+                     f"{top['betweenness']}, {top['siblings']} colliding siblings)")
+        m = rg["min_edit_set"]
+        if m["total_edges"]:
+            L.append(f"- minimal-edit set: {m['k']} description(s) cover all "
+                     f"{m['total_edges']} collision edges")
+        L.append(f"- reference graph: {len(rg['orphans'])} orphan(s), "
+                 f"{len(rg['broken_handoffs'])} broken handoff(s), "
+                 f"{len(rg['cycles'])} cycle(s)")
+        L.append("- full map: `curator.py graph --md ROUTING.md` "
+                 "(`--mermaid`/`--dot` to export)")
+        L.append("")
     conf = findings.get("routing_confusion")
     if conf:
         L.append("## Routing confusion (from probes-grade)")
@@ -1160,6 +1605,10 @@ def build_all(args, with_ledger=True, write_snapshot=True):
     conf = load_json(os.path.join(sd, "skill-curator-confusion.json"), None)
     if conf:
         findings["routing_confusion"] = conf
+    findings["routing_graph"] = routing_graph_findings(
+        build_trigger_graph(skills), build_reference_graph(skills),
+        ledger=load_json(ledger_path(sd), {}),
+        show_all=getattr(args, "all", False))
     if with_ledger:
         apply_ledger(findings, load_json(ledger_path(sd), {}),
                      show_all=getattr(args, "all", False))
@@ -1179,6 +1628,33 @@ def cmd_report(args):
         with open(args.md, "w", encoding="utf-8") as f:
             f.write(render_md(findings) + "\n")
         print(f"\nreport written: {args.md}", file=sys.stderr)
+    return 0
+
+
+def cmd_graph(args):
+    if getattr(args, "roots", None):
+        args.root = args.roots
+    roots, caches = default_roots(args)
+    skills = gather_skills(roots, caches)
+    gt = build_trigger_graph(skills)
+    if args.mermaid:
+        print(graph_to_mermaid(gt))
+        return 0
+    if args.dot:
+        print(graph_to_dot(gt))
+        return 0
+    gr = build_reference_graph(skills)
+    sd = state_dir_of(args)
+    gf = routing_graph_findings(gt, gr, ledger=load_json(ledger_path(sd), {}),
+                                show_all=getattr(args, "all", False))
+    if args.json:
+        print(json.dumps(gf, indent=2, ensure_ascii=False))
+    else:
+        print(render_graph_md(gf))
+    if args.md:
+        with open(args.md, "w", encoding="utf-8") as f:
+            f.write(render_graph_md(gf) + "\n")
+        print(f"\nrouting graph written: {args.md}", file=sys.stderr)
     return 0
 
 
@@ -2003,6 +2479,89 @@ def cmd_selftest(_args):
                base_version("Version2") == "Version2",
                "base_version strips one leading v before digits only")
 
+        # --- graph core (Phase 1) ---
+        # connected_components: two isolated groups
+        cc = connected_components({"a": {"b": 1}, "b": {"a": 1}, "c": {}})
+        expect(cc == [["a", "b"], ["c"]],
+               "connected_components splits disjoint groups incl. singletons")
+        # betweenness on a hand-verified 5-node path a-b-c-d-e (unnormalized):
+        # middle node c lies on paths between {a,b} and {d,e} = 4; b and d = 3
+        path = {"a": {"b": 1}, "b": {"a": 1, "c": 1}, "c": {"b": 1, "d": 1},
+                "d": {"c": 1, "e": 1}, "e": {"d": 1}}
+        bc = betweenness_centrality(path, normalized=False)
+        expect(bc["c"] == 4.0 and bc["b"] == 3.0 and bc["d"] == 3.0 and
+               bc["a"] == 0.0 and bc["e"] == 0.0,
+               "betweenness_centrality matches hand-computed 5-path values")
+        # degree centrality of the middle of a 3-path is 1.0 (adjacent to both)
+        dcc = degree_centrality({"a": {"b": 1}, "b": {"a": 1, "c": 1},
+                                 "c": {"b": 1}})
+        expect(dcc["b"] == 1.0 and dcc["a"] == 0.5,
+               "degree_centrality normalizes by n-1")
+        # greedy vertex cover: star is covered by its hub alone
+        expect(greedy_min_vertex_cover([("h", "a"), ("h", "b"), ("h", "c")])
+               == ["h"], "greedy_min_vertex_cover picks the star hub")
+        tri = greedy_min_vertex_cover([("a", "b"), ("b", "c"), ("a", "c")])
+        covered = all(a in tri or b in tri
+                      for a, b in [("a", "b"), ("b", "c"), ("a", "c")])
+        expect(len(tri) == 2 and covered,
+               "greedy_min_vertex_cover covers every triangle edge with 2")
+
+        # trigger graph over the main fixture set
+        gt_ = build_trigger_graph(skills)
+        expect("swift-anim-polish" in gt_["adj"].get("swift-anim-audit", {}),
+               "build_trigger_graph links colliding skills with an edge")
+        comps = [c for c in connected_components(gt_["adj"]) if len(c) >= 2]
+        expect(any({"swift-anim-audit", "swift-anim-polish"} <= set(c)
+                   for c in comps),
+               "connected_components group the trigger-collision cluster")
+
+        # reference graph: orphan + cycle detection on a purpose-built root
+        gdir = os.path.join(croot, "gskills")
+        os.makedirs(gdir)
+        mk(gdir, "route-hub", "Dispatch requests to the correct stage first.",
+           body_extra="Start here, then use leaf-one or leaf-two.")
+        mk(gdir, "leaf-one", "Handle the first branch of the workflow.")
+        mk(gdir, "leaf-two", "Handle the second branch of the workflow.")
+        mk(gdir, "cyc-alpha", "First cyclic stage of the pipeline.",
+           body_extra="After this, continue with cyc-beta.")
+        mk(gdir, "cyc-beta", "Second cyclic stage of the pipeline.",
+           body_extra="Next, move on to cyc-gamma.")
+        mk(gdir, "cyc-gamma", "Third cyclic stage of the pipeline.",
+           body_extra="Finally, loop back to cyc-alpha.")
+        mk(gdir, "lonely-island",
+           "A self-contained standalone chore with no handoffs.")
+        gr_ = build_reference_graph(gather_skills([gdir], []))
+        radj = gr_["adj"]
+        indeg = in_degree(radj)
+        expect(indeg["leaf-one"] >= 1 and indeg["route-hub"] == 0,
+               "build_reference_graph computes handoff in-degree")
+        expect("leaf-one" in radj["route-hub"] and
+               radj["route-hub"]["leaf-one"]["why"] == ["name"],
+               "reference edge records WHY it was drawn")
+        outdeg = {u: len(radj[u]) for u in radj}
+        orph = sorted(u for u in radj
+                      if indeg[u] == 0 and outdeg[u] == 0)
+        expect("lonely-island" in orph and "route-hub" not in orph and
+               "leaf-one" not in orph,
+               "orphan skill detected; entry hub and referenced leaves excluded")
+        cyc = find_cycles(radj)
+        expect(any({"cyc-alpha", "cyc-beta", "cyc-gamma"} <= set(c)
+                   for c in cyc),
+               "find_cycles detects the reference-graph cycle")
+
+        # end-to-end assembler + renderers + fp scheme
+        gf_ = routing_graph_findings(gt_, build_reference_graph(skills))
+        expect(gf_["edge_count"] >= 1 and gf_["collision_clusters"] and
+               all(c["fp"].startswith("coll-")
+                   for c in gf_["collision_clusters"]),
+               "routing_graph_findings assembles clusters with coll- fps")
+        expect(len(gf_["min_edit_set"]["cover"]) >= 1,
+               "minimal-edit vertex cover computed over collision edges")
+        expect(render_graph_md(gf_).startswith("# Routing graph") and
+               graph_to_mermaid(gt_).startswith("graph LR") and
+               graph_to_dot(gt_).startswith("graph Gt {"),
+               "routing graph md/mermaid/dot exports render")
+
     print(f"\nselftest: {total[0] - len(fails)}/{total[0]} passed")
     return 1 if fails else 0
 
@@ -2045,6 +2604,22 @@ def main():
     rp.add_argument("--all", action="store_true",
                     help="include rejected/snoozed findings")
     rp.set_defaults(fn=cmd_report)
+
+    grp = sub.add_parser("graph", help="routing graph: collision clusters, "
+                                       "trigger hogs, minimal-edit set, "
+                                       "reference orphans/handoffs/cycles")
+    add_common(grp, usage=False)
+    grp.add_argument("roots", nargs="*",
+                     help="skills roots (override the defaults)")
+    grp.add_argument("--md", help="also write the routing-graph report here")
+    grp.add_argument("--json", action="store_true")
+    grp.add_argument("--mermaid", action="store_true",
+                     help="emit G_t as text Mermaid and exit")
+    grp.add_argument("--dot", action="store_true",
+                     help="emit G_t as Graphviz DOT and exit")
+    grp.add_argument("--all", action="store_true",
+                     help="include ledger-hidden collision clusters")
+    grp.set_defaults(fn=cmd_graph)
 
     cp = sub.add_parser("check", help="assert findings (for CI/scheduled runs)")
     add_common(cp)
