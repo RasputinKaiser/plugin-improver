@@ -33,6 +33,23 @@ One line each, severity-tagged, evidence in backticks, fix after the arrow:
 
 Severity: 🔴 breaks behavior, 🟡 degrades quality, 🟢 cosmetic. Sort 🔴→🟢. Cap at 8 lines; fold the rest into "…and N minor findings (ask to expand)".
 
+## Diagnostics
+
+A compact block placed right under the scorecard, showing the machine floor vs judgment split and the two runtime signals. Keep it to 3–4 lines:
+
+```
+🔎 Floor 71/100 auto (score.py) · +9 judged = 80/100 · needs_judgment: skill-quality, trigger-negativescope
+🪙 Session tax 4.1k tok · body headroom OK · descriptions +180 tok vs baseline (tokens.py)
+🩺 Runtime: 2 hook errors, 1 skill error in 14 sessions — `hooks/lint.sh` exit 1 ×2 (errscan.py)
+✅ Runtime clean — no hook/tool/skill errors in scanned sessions
+```
+
+- Floor line: `auto` total from `score.py`, points you judged on top, final, and which dimensions still carried `needs_judgment` notes.
+- Token line: session-tax headline, budget headroom (or the skill that blew it), and baseline delta — the evidence behind any Context economy deduction.
+- Runtime line: error counts per plugin/skill and the top offending handler; when clean, collapse to the single ✅ line. This is the evidence behind any Hooks health deduction.
+
+Show the tool name in parentheses so the number is traceable. If a script didn't run, say `floor: manual (score.py unavailable)` rather than omitting the line.
+
 ## Before/after (trigger tuning)
 
 ```

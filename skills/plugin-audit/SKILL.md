@@ -24,21 +24,38 @@ Check each item and record pass/fail with file paths as evidence:
 - Hook commands use `${CLAUDE_PLUGIN_ROOT}` (portable; Codex also accepts `${PLUGIN_ROOT}`) instead of absolute or bare relative paths.
 - `.mcp.json` (if present) is a direct server map or a `mcp_servers`-wrapped map.
 
-## 3. Score
+## 3. Diagnostics (machine floor + runtime signal)
 
-Read `references/scoring-rubric.md` and score all six dimensions (100 points total); it awards cross-harness parity credit inside Manifest integrity and Distribution readiness. For distribution readiness, also run the visual-presentation checks in `references/presentation.md` (interface metadata, icons, starter prompts, and the Codex-only per-skill openai.yaml). Every deduction needs a concrete evidence line (file, and line number where useful).
+Run three stdlib scripts before scoring; their output is evidence, not verdicts.
 
-## 4. Report
+```
+python3 scripts/score.py <plugin-root> --json      # deterministic machine floor
+python3 scripts/tokens.py <plugin-root>            # token & budget report
+python3 scripts/errscan.py <plugin-root>           # runtime errors from session logs
+```
 
-Format the report per `references/report-style.md` (scorecard bars, severity-tagged findings, verdict first). Produce it in this order:
+- `score.py` emits `{dimension:{auto,max,needs_judgment}}` — the machine FLOOR: take each `auto` as fixed, score only the `needs_judgment` items. Mapping in `references/deterministic-scoring.md`.
+- `tokens.py` gives the session-tax headline, budget headroom, and baseline delta → feeds Context economy.
+- `errscan.py` aggregates runtime errors per plugin/skill → feeds Hooks health (hooks that throw lose points even when `hooks.json` shape is valid).
+
+If a script is missing, inspect manually and note it.
+
+## 4. Score
+
+Read `references/scoring-rubric.md` and score all six dimensions (100 points total) on top of the `score.py` floor. It awards cross-harness parity credit inside Manifest integrity and Distribution readiness. For distribution readiness, also run the visual-presentation checks in `references/presentation.md` (interface metadata, icons, starter prompts, and the Codex-only per-skill openai.yaml). Every deduction needs a concrete evidence line (file, and line number where useful), citing script output where it drives one.
+
+## 5. Report
+
+Format the report per `references/report-style.md` (scorecard bars, severity-tagged findings, Diagnostics block, verdict first). Produce it in this order:
 
 1. Scorecard table: dimension, points earned/possible, one-line reason.
-2. Findings, sorted by severity, each with evidence and a concrete fix.
-3. Prioritized fix list split into quick wins (low effort, high impact) and larger work.
-4. Context-cost summary: per-skill description length and SKILL.md body word count, flagged against the rubric's budgets.
+2. Diagnostics block: floor vs judgment split, token/session-tax and runtime-error lines.
+3. Findings, sorted by severity, each with evidence and a concrete fix.
+4. Prioritized fix list: quick wins (low effort, high impact) and larger work.
+5. Context-cost summary: per-skill description length and SKILL.md body word count, flagged against the rubric's budgets.
 
-## 5. Baseline for regression tracking
+## 6. Baseline for regression tracking
 
-Offer to save the audit as a baseline at `<plugin-root>/.plugin-improver/baseline.json` containing: date, total and per-dimension scores, file inventory with word counts, and all skill descriptions verbatim. `plugin-improve` compares against this to prove later passes did not regress.
+Offer to save the audit as a baseline at `<plugin-root>/.plugin-improver/baseline.json` containing: date, total and per-dimension scores (including the `score.py` deterministic floor), file inventory with word counts, and all skill descriptions verbatim. `plugin-improve` compares against this to prove later passes did not regress.
 
 End by suggesting `plugin-improve` to act on the findings.

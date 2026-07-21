@@ -2,6 +2,8 @@
 
 Score each dimension independently. Deduct only with concrete evidence. Half points allowed.
 
+The deterministic scorer (`score.py`) computes the objective slice of several dimensions and returns `{dimension:{auto,max,needs_judgment}}`; treat `auto` as the machine FLOOR and judge only what it flags. `references/deterministic-scoring.md` maps each dimension to what is auto-scored vs judged. Two runtime diagnostics supply evidence lines: `tokens.py` (token/budget report) feeds Context economy, and `errscan.py` (session-log error scan) feeds Hooks health — cited inline below.
+
 ## 1. Manifest integrity — 15 points
 
 - 4 — Each present `plugin.json` is valid JSON with kebab-case `name`, semver `version`, accurate `description`.
@@ -41,14 +43,18 @@ Budgets (flag, then deduct):
 - 4 — Descriptions within budget (they load into every session's metadata).
 - 2 — No dead weight: unused directories, stale examples, empty files.
 
+Evidence: read the token/budget report (`tokens.py`) here. Its session-tax headline and per-skill budget headroom quantify bloat — a skill over its body or description budget, or a plugin whose session tax has grown against baseline, is a concrete deduction line. A green machine floor from `score.py` (chars/words within budget, no dead files) fixes the mechanical part; judge duplication and progressive-disclosure quality on top.
+
 ## 5. Hooks health — 10 points
 
 If the plugin has no hooks and needs none, award 10.
 
 - 3 — Valid `hooks.json` shape: event → matcher group → handlers.
-- 3 — Contracts correct per event (see plugin-hooks skill references): on Codex, Stop returns JSON on stdout, blocking uses documented shapes or exit 2 + stderr.
+- 3 — Contracts correct per event (see plugin-hooks skill references): on Codex, Stop returns JSON on stdout, blocking uses documented shapes or exit 2 + stderr. **Static shape is necessary but not sufficient** — a hook whose command errors at runtime fails this criterion even with valid JSON.
 - 2 — Paths use `${CLAUDE_PLUGIN_ROOT}` (Codex also accepts `${PLUGIN_ROOT}`); scripts exist and are executable; sensible `timeout`.
 - 2 — Hooks respect each target harness's limits rather than silently depending on unsupported behavior: on Codex tool events are Bash-only today and matchers are ignored on UserPromptSubmit/Stop; on Claude Code matchers match all tools.
+
+Evidence: read the runtime error scan (`errscan.py`) here. Hook/tool/skill errors it aggregates for the target plugin are direct evidence against the contracts and paths sub-points — a hook that throws, times out, or hits a missing script at runtime is a real deduction the static shape check cannot see. `score.py` auto-scores only the shape/paths-present part; runtime health and per-harness correctness are judgment on top.
 
 ## 6. Distribution readiness — 10 points
 
