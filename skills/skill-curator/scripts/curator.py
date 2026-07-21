@@ -1324,25 +1324,44 @@ def compute_diff(findings, state_dir, write=True):
 
 # --- scoring + report -------------------------------------------------------
 
+# Frozen calibration contract shared with plugin-audit's scoring rubric:
+#   92-100 Exceptional | 82-91 Strong | 68-81 Solid
+#   50-67 Needs work    | <50 Poor
+def grade_band(pts):
+    if pts >= 92:
+        return "Exceptional"
+    if pts >= 82:
+        return "Strong"
+    if pts >= 68:
+        return "Solid"
+    if pts >= 50:
+        return "Needs work"
+    return "Poor"
+
+
 def score(findings):
-    pts = 100.0
+    # Start below 100 (a mild curation tax): even a spotless inventory tops out
+    # in the low-mid 90s, so a clean-but-unremarkable inventory can't coast to a
+    # near-free perfect score. Deductions are graduated and steep enough that a
+    # handful of real findings drops an inventory into the Solid/Needs-work bands.
+    pts = 96.0
     for d in findings.get("duplicate_surfaces", []):
-        pts -= {"diverged-copies": 8, "identical-copies": 5,
-                "shared": 0}.get(d["class"], 4)
+        pts -= {"diverged-copies": 12, "identical-copies": 8,
+                "shared": 0}.get(d["class"], 7)
     for c in findings.get("collision_clusters", []):
-        pts -= 5 if c.get("phrase_backed") else 3
-    pts -= 4 * len(findings.get("near_dupes", []))
-    pts -= 2 * len(findings.get("dead", []))
-    pts -= 1 * len(findings.get("long_descriptions", []))
-    pts -= min(10.0, 0.5 * len(findings.get("prune_candidates",
+        pts -= 8 if c.get("phrase_backed") else 5
+    pts -= 6 * len(findings.get("near_dupes", []))
+    pts -= 4 * len(findings.get("dead", []))
+    pts -= 3 * len(findings.get("long_descriptions", []))
+    pts -= min(20.0, 1.5 * len(findings.get("prune_candidates",
                                             findings.get("never_used", []))))
-    pts -= 4 * len(findings.get("plugin_version_drift", []))
-    pts -= 3 * len(findings.get("duplicate_plugins", []))
-    pts -= min(5.0, 1 * len(findings.get("stale_plugin_caches", [])))
-    pts = max(0.0, pts)
-    grade = ("A" if pts >= 90 else "B" if pts >= 80 else
-             "C" if pts >= 70 else "D" if pts >= 60 else "F")
-    return int(round(pts)), grade
+    pts -= 6 * len(findings.get("plugin_version_drift", []))
+    pts -= 5 * len(findings.get("duplicate_plugins", []))
+    pts -= min(10.0, 1.5 * len(findings.get("stale_plugin_caches", [])))
+    # Band the rounded value that is actually displayed, so the label never
+    # contradicts the number (fractional deductions can straddle a boundary).
+    pts_int = int(round(max(0.0, pts)))
+    return pts_int, grade_band(pts_int)
 
 
 def top_actions(findings):
@@ -2272,8 +2291,21 @@ def cmd_selftest(_args):
         f6 = analyze(gather_skills([td, td2], [pc]))
         compute_diff(f6, sd)
         expect(f6["diff"]["resolved_count"] == 0, "adding a skill resolves nothing")
-        _pts, grade = score(f6)
-        expect(grade in "ABCDF", "score yields a letter grade")
+        bands = ("Exceptional", "Strong", "Solid", "Needs work", "Poor")
+        pts6, grade6 = score(f6)
+        expect(grade6 in bands, "score yields a frozen band label")
+        clean = {"duplicate_surfaces": [], "collision_clusters": [],
+                 "near_dupes": [], "dead": [], "long_descriptions": [],
+                 "prune_candidates": [], "plugin_version_drift": [],
+                 "duplicate_plugins": [], "stale_plugin_caches": []}
+        pts_clean, grade_clean = score(clean)
+        expect(pts_clean >= 92 and grade_clean == "Exceptional",
+               "clean inventory reaches Exceptional (rare but achievable)")
+        expect(pts_clean < 100, "no near-free perfect score even when clean")
+        expect(pts6 < pts_clean and grade6 in ("Solid", "Needs work", "Poor"),
+               "sprawl-heavy fixture scores demonstrably lower than clean")
+        expect(f"({pts6}/100)" in render_md(f6) and grade6 in render_md(f6),
+               "health line prints the frozen band label")
         expect(render_md(f6).startswith("# Skill Curator report"),
                "markdown report renders")
 
