@@ -1,5 +1,27 @@
 # Improvement ledger — plugin-improver
 
+## 2026-07-20 — 1.2.0 → 1.3.0 (diagnostics & evaluation batch: roadmap Phases 2–4 + error/token mining)
+- Parallel batch: 9 independently-mergeable units, each owning disjoint files (worktree-isolated,
+  merged via 9 PRs #1–#9). curator.py was deliberately kept FROZEN — new capabilities ship as new
+  stdlib sibling scripts under `scripts/`, so no worker collided on the 2700-line engine. Workers were
+  forbidden from touching versions/CHANGELOG/LEDGER/README/manifests; this integration pass does the
+  single release bump.
+- Delivered: `score.py` (Phase 2 deterministic scorer + `--min`/`--min-baseline` gate, wired into CI),
+  `portfolio.py` (Phase 3 sweep + score trajectory), `route_eval.py` (Phase 4 routing loop, offline by
+  default), `errscan.py` (runtime hook/tool/skill-error mining with secret redaction), `tokens.py`
+  (per-plugin token/budget report). `validate.py` upgraded to a diagnostic linter (codes/severity/fix
+  hints, +3 checks, backward-compatible `--json`). Skills `plugin-audit`/`plugin-improve`/
+  `plugin-tune-triggers` now consume the numeric gates; rubric total held at 100.
+- Every script worker ran an independent code-review pass that caught REAL bugs before merge: score.py
+  (5 — flag IndexError, non-numeric `--min`, malformed-baseline crash, parity over-credit, JSON stdout
+  pollution), tokens.py (folded-frontmatter descriptions read as 0 tokens), route_eval.py (3 graceful-
+  failure gaps), errscan.py (3 — Codex `exec_command_end` shell exits unhandled, `sk_live_` redaction
+  gap, cross-plugin skill bucket collision). All fixed + regression-covered.
+- Verify (combined tree on main): validate.py `PASS 11/11`; curator selftest `83/83`; score/portfolio/
+  tokens/errscan/route_eval selftests all green; self deterministic auto-score 60/100 (CI floor 57).
+  Minor bump (new capability, no behavior change to existing skills). NOT done: `plugin-migrate` (Phase
+  3's 8th skill) — deferred as out of scope for a diagnostics/evaluation batch; roster stays 7 skills.
+
 ## 2026-07-20 — 1.1.1 → 1.2.0 (roadmap Phase 1: routing graph in skill-curator)
 - Implemented the graph core from docs/ROADMAP-measurement-graph.md: `build_trigger_graph`
   (G_t, undirected weighted) and `build_reference_graph` (G_r, directed) plus stdlib graph

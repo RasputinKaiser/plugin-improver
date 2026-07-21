@@ -3,6 +3,20 @@
 All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## 1.3.0 - 2026-07-20
+
+### Added
+- **Deterministic scorer + CI gate (roadmap Phase 2).** New `scripts/score.py` computes the machine-verifiable floor of the 100-pt audit rubric per dimension (`{auto, max, needs_judgment}`), with `--json`/`--md`, a `--min N` floor gate, and a `--min-baseline PATH` regression gate. Wired into `.github/workflows/ci.yml` alongside the existing validator + curator selftests.
+- **Portfolio sweep (roadmap Phase 3).** New `scripts/portfolio.py` scores every local plugin **source** (never read-only caches), prints a fix-first leaderboard, and persists per-plugin score history so slow rot shows as a trajectory delta.
+- **Empirical routing-evaluation loop (roadmap Phase 4).** New `scripts/route_eval.py` wraps `skill-curator`'s probes: generates near-miss probes prioritized by the G_t collision graph's confusable pairs, scores a confusion matrix + per-skill precision/recall, and gates description changes on measured accuracy ≥ baseline. Offline manual router by default (no model dependency).
+- **Runtime error / health mining.** New `scripts/errscan.py` scans Claude Code + Codex session logs for hook failures, tool errors, and skill-invocation failures, attributed per `plugin:skill`, with hard secret-redaction and an incremental cache. The health counterpart to curator's usage mining.
+- **Deep token / context-budget report.** New `scripts/tokens.py` reports per-skill trigger-vs-invoke tokens, per-plugin "session tax", budget headroom vs the rubric, and a baseline delta to catch slow bloat (`--save-baseline`, `--max-trigger-tokens N` gate).
+
+### Changed
+- **`scripts/validate.py` is now a diagnostic linter.** Every finding carries a stable code (`PI-<letter>NNN`), a severity (`error`/`warn`/`info`), and a one-line fix hint; `--json` gains a flat `findings` array while keeping the legacy `results`/`passed`/`total`/`summary` keys. Three new mechanical checks added (hook script exists/executable/uses `${CLAUDE_PLUGIN_ROOT}`; `.mcp.json` shape; dead/empty files under `skills/`). Exit-code contract preserved (self-validates `PASS 11/11`).
+- **`plugin-audit`, `plugin-improve`, `plugin-tune-triggers` now consume the new diagnostics.** Audit folds in the deterministic floor + token + runtime-error signals (rubric total unchanged at 100); improve's non-regression gate now carries numbers (score/tokens/errors/routing baselines); tune-triggers is graph-driven and gated on measured routing accuracy.
+- Docs: `docs/ROADMAP-measurement-graph.md` marks Phases 2–4 delivered; `docs/architecture.md` documents the new `scripts/` diagnostic surface. `plugin-migrate` remains intentionally unbuilt (out of scope; roster stays 7 skills).
+
 ## 1.2.0 - 2026-07-20
 
 ### Added
