@@ -9,7 +9,15 @@ Improve the target plugin in one bounded, verifiable pass. The contract: every p
 
 ### 1. Baseline
 
-Load `<plugin-root>/.plugin-improver/baseline.json` and `LEDGER.md` if they exist. If not, run the `plugin-audit` procedure (its rubric is at `../plugin-audit/references/scoring-rubric.md`) and save the baseline first. If the rubric file is missing (stripped install), score the six dimensions from the plugin-audit skill body — manifest 15, skills 25, triggers 20, context 20, hooks 10, distribution 10 — and say the detailed rubric was unavailable. No changes before a baseline exists. Treat inherited findings as hypotheses: re-verify each against current evidence before acting, and withdraw mistaken ones in the ledger — never "fix" what a stale finding merely claims is wrong.
+Load `<plugin-root>/.plugin-improver/baseline.json` and `LEDGER.md` if they exist. If not, run the `plugin-audit` procedure (its rubric is at `../plugin-audit/references/scoring-rubric.md`) and save the baseline first. If the rubric file is missing (stripped install), score the six dimensions from the plugin-audit skill body — manifest 15, skills 25, triggers 20, context 20, hooks 10, distribution 10 — and say the detailed rubric was unavailable. Also capture numeric baselines:
+
+```
+python3 scripts/score.py <plugin>  > .plugin-improver/score-baseline.json
+python3 scripts/tokens.py <plugin> --save-baseline
+python3 scripts/route_eval.py <plugin>   # routing accuracy, if any
+```
+
+No changes before a baseline exists. Treat inherited findings as hypotheses: re-verify each against current evidence before acting, and withdraw mistaken ones in the ledger — never "fix" what a stale finding merely claims is wrong.
 
 ### 2. Select — at most 3 improvements per pass
 
@@ -26,7 +34,17 @@ Hard rules while editing:
 
 ### 4. Verify — the non-regression gate
 
-Work through `references/regression-checklist.md` completely (if missing: verify identity unchanged, manifests parse, frontmatter valid, context budgets held — never skip verification silently). If the plugin ships `scripts/validate.py`, run it (`python3 scripts/validate.py`) — a red validator blocks the pass. Then re-score with the audit rubric. Ship only if: new total ≥ baseline total, no dimension dropped more than 2 points, and the context budget held. Any failure → revert the offending change, not the whole pass.
+Work through `references/regression-checklist.md` (if missing: verify identity unchanged, manifests parse, frontmatter valid, context budgets held — never skip verification). Then run the measured gates:
+
+```
+python3 scripts/validate.py
+python3 scripts/score.py <plugin>  --min-baseline .plugin-improver/score-baseline.json
+python3 scripts/tokens.py <plugin> --max-trigger-tokens N
+python3 scripts/errscan.py --plugin <plugin>
+python3 scripts/route_eval.py --min-baseline .plugin-improver/route-baseline.json
+```
+
+Ship only if every gate is green: `validate.py` passes, the score did not drop, net metadata growth ≤10% (session tax held), no NEW runtime errors, and — when trigger descriptions changed — routing accuracy ≥ baseline. Then re-score with the rubric: no dimension down > 2 points. Any red gate → revert the offending change, not the whole pass.
 
 ### 5. Record
 
