@@ -18,6 +18,42 @@ Run every item after applying changes, before re-scoring. An unchecked item bloc
 - [ ] If the plugin ships tests, a build script, or `scripts/validate.py`, RUN them (`python3 scripts/validate.py`, pytest, build.sh). A "verified"/"green" claim in `state.yaml`, `LEDGER.md`, or a prior baseline is not evidence — a red suite hid behind a green state claim (2026-07-13).
 - [ ] Verify artifact CONTENT, not exit banners: a copy step that "succeeded" shipped an unmodified file when a permissions error was swallowed mid-pipeline (2026-07-13).
 
+## Measured gates (run in order; each must pass before the pass ships)
+
+These are the numeric non-regression gates. They compare against the baselines captured in step 1 (`.plugin-improver/score-baseline.json`, the token baseline, and — if a routing set exists — `.plugin-improver/route-baseline.json`). If a script is absent (stripped install), fall back to the qualitative checks below and say the measured gate was unavailable.
+
+1. [ ] **Validator green.** A red validator blocks the pass:
+
+    ```
+    python3 scripts/validate.py
+    ```
+
+2. [ ] **Deterministic score did not drop.** Exit 1 = regression → revert the offending change:
+
+    ```
+    python3 scripts/score.py <plugin> --min-baseline .plugin-improver/score-baseline.json
+    ```
+
+3. [ ] **Token / session-tax budget held.** Net metadata growth ≤ 10% vs the saved baseline; trigger tokens under the cap:
+
+    ```
+    python3 scripts/tokens.py <plugin> --max-trigger-tokens N
+    ```
+
+4. [ ] **No NEW runtime errors.** Compare against the step-1 error signal; a newly introduced error blocks the pass:
+
+    ```
+    python3 scripts/errscan.py --plugin <plugin>
+    ```
+
+5. [ ] **Routing accuracy ≥ baseline** — only when trigger descriptions changed. Exit 1 = accuracy regressed → revert the trigger edit:
+
+    ```
+    python3 scripts/route_eval.py --min-baseline .plugin-improver/route-baseline.json
+    ```
+
+Any red gate → revert only the offending change (see Revert rule), re-run the gate, then continue the pass.
+
 ## Behavior
 
 - [ ] Trigger test matrix (`.plugin-improver/trigger-matrix.md`, if present) still passes: all should-trigger prompts select the right skill, all near-miss prompts do not.
@@ -36,7 +72,12 @@ Run every item after applying changes, before re-scoring. An unchecked item bloc
 
 - [ ] Re-scored with the audit rubric: total ≥ baseline, no dimension down > 2 points.
 - [ ] `LEDGER.md` entry appended (date, version, changes, scores, context delta, deliberate omissions).
-- [ ] `.plugin-improver/baseline.json` overwritten with the new state.
+- [ ] `.plugin-improver/baseline.json` overwritten with the new state, and the numeric baselines refreshed for the next pass:
+
+    ```
+    python3 scripts/score.py <plugin>  > .plugin-improver/score-baseline.json
+    python3 scripts/tokens.py <plugin> --save-baseline
+    ```
 
 ## Revert rule
 
