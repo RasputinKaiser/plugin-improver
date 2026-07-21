@@ -64,6 +64,30 @@ keeps the two-harness setup honest, checking that:
 CI (`.github/workflows/ci.yml`) runs the validator on push and pull request, so the two
 harnesses can never silently drift apart in `main`.
 
+## The `scripts/` diagnostic surface
+
+`validate.py` checks a plugin's *shape*; a family of stdlib-only diagnostics in repo-root
+`scripts/` *measures* it. They compose with `skill-curator`, whose own
+`skills/skill-curator/scripts/curator.py` does the inventory-wide analysis (sprawl,
+collisions, the routing graph) — curator picks *which* target to fix, these quantify *why*.
+
+| Script | What it reports |
+|---|---|
+| `scripts/validate.py` | The CI contract above — manifests/frontmatter/body-budget/reference-integrity/parity. |
+| `scripts/sync.sh` | Installs the repo into `~/.claude` and `~/.codex` (auto-installs on Claude Code via the `claude` CLI). |
+| `scripts/score.py` | Deterministic machine sub-score of the audit rubric's objective parts, with a `--min-baseline` CI gate that fails the build on score regression. |
+| `scripts/portfolio.py` | Portfolio sweep — runs `score.py` across every local plugin source, emits a fix-first leaderboard (low score × high usage) and a per-plugin score trajectory. |
+| `scripts/tokens.py` | Deep per-plugin token / context-budget report — session tax, headroom, and delta vs the stored baseline. |
+| `scripts/errscan.py` | Runtime error/health mining from Claude Code and Codex session logs, attributed per plugin/skill. |
+| `scripts/route_eval.py` | Empirical routing-accuracy loop wrapping curator's routing probes, with a `--min-baseline` gate so trigger precision is measured, not asserted. |
+
+`plugin-audit` and `plugin-improve` consume `score.py` as their deterministic floor;
+`plugin-tune-triggers` and `plugin-improve` consume `route_eval.py`'s measured accuracy as
+a non-regression gate. `docs/ROADMAP-measurement-graph.md` maps each script to its
+measurement-roadmap phase, and `skill-curator`'s "Companion diagnostics" section shows the
+same composition from the skill side. All are stdlib-only except `route_eval.py`'s opt-in
+model call.
+
 ## Memory model
 
 plugin-improver never mutates the plugins it works on without leaving a trail, and it

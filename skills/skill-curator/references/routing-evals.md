@@ -45,6 +45,40 @@ includes ledger-hidden clusters.
 For measured real-model runs, seed plugin-eval's harness: `plugin-eval init-benchmark`,
 then paste entries from benchmark-scenarios.json into `.plugin-eval/benchmark.json`.
 
+## Driving it end-to-end: `route_eval.py`
+
+The four manual steps above are the reference pipeline; `route_eval.py` is the driver that
+operationalizes them as one measured, repeatable loop, wrapping the same `curator.py graph`
+/ `probes` / `probes-grade` stages so a description change is gated on an accuracy *number*
+rather than a lexical hypothesis:
+
+```
+python3 scripts/route_eval.py                   # full loop: generate → route → grade
+python3 scripts/route_eval.py --min-baseline    # gate a change on measured accuracy (CI)
+```
+
+1. **Near-miss generation from `G_t`.** It lifts should-trigger probes from each skill's
+   quoted trigger phrases and synthesizes 2–3 paraphrase + near-miss probes per skill,
+   **prioritized by `G_t`'s confusable pairs** — it probes the collisions the graph found
+   rather than random pairs (this is the Phase 1 → Phase 4 dependency). Author-supplied
+   probes appended to `probes.json` are honored, same as the manual flow.
+2. **Routing.** Presents ONLY the description set (the router's real input) plus one probe
+   to a harness-native router — on Codex `gpt-5.6-luna` at `model_reasoning_effort=high`
+   (batch to limit session-file pollution), on Claude Code an Opus subagent — with a manual
+   fallback when no model is available. This mirrors routing every probe against
+   routing-sheet.md.
+3. **Confusion matrix.** Grades the routed picks exactly as `curator.py probes-grade` does
+   — per-skill precision/recall plus overall accuracy — and persists the run to
+   `.plugin-improver/routing-<date>.json` so trajectories are visible across passes.
+4. **Accuracy gate.** `--min-baseline` compares the run against the stored baseline (or a
+   `--min N` floor) and exits nonzero on regression, so `plugin-tune-triggers` and
+   `plugin-improve` carry a *measured* non-regression gate — the number now moves, or the
+   change is rejected. Re-run after a description fix to prove the fix raised accuracy.
+
+Use the manual `probes` / `probes-grade` steps when you want to route by hand or delegate
+to a second model for an independent opinion; `route_eval.py` is the automated driver over
+the same artifacts.
+
 ## plugin-eval integration
 
 One-time: `python3 scripts/curator.py emit-metric-pack --dir ~/.codex/curator-metric-pack`.
