@@ -18,3 +18,15 @@ jobs:
 
       - name: Run validator
         run: python3 scripts/validate.py
+
+      - name: Curator selftest
+        run: python3 skills/skill-curator/scripts/curator.py selftest
+
+      - name: Scorer selftest
+        run: python3 scripts/score.py selftest
+
+      - name: Portfolio selftest
+        run: python3 scripts/portfolio.py selftest
+
+      - name: Self-score floor (deterministic auto-score must not regress)
+        run: python3 scripts/score.py . --min 57
