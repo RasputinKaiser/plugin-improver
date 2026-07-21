@@ -24,7 +24,7 @@ Score across all skills, weight by how central each skill is.
 - 7 — Every description states what the skill does AND when to use it, with concrete trigger phrases users actually say.
 - 5 — Negative scope: says when NOT to use it, or is precise enough that misfires are unlikely.
 - 5 — No trigger collisions: no two skills in the plugin (or obvious user-level skills) claim the same prompt.
-- 3 — Risky or niche skills opt out of implicit invocation via `agents/openai.yaml` `policy.allow_implicit_invocation: false`.
+- 3 — Risky or niche skills are guarded against accidental firing. On Codex, via `agents/openai.yaml` `policy.allow_implicit_invocation: false`. On Claude Code (which has no opt-out flag), via a tightly negative-scoped description or by shipping the capability as an explicit command. Award full credit to a single-harness plugin that uses its harness's available mechanism.
 
 ## 4. Context economy — 20 points
 
@@ -54,7 +54,7 @@ If the plugin has no hooks and needs none, award 10.
 
 - 3 — README covers what it does, the skills it ships, and install steps (per targeted harness).
 - 3 — Version discipline: version bumped with changes; changelog or ledger exists if the plugin has history.
-- 4 — A marketplace entry exists for each harness the plugin targets — Claude Code `.claude-plugin/marketplace.json` and/or the Codex registration (`~/.agents/plugins/marketplace.json` or `~/.codex/config.toml [marketplaces]`) — each with `policy.installation`, `policy.authentication`, `category`, and a resolvable `source.path`. A targeted harness with no entry is a deduction.
+- 4 — A marketplace entry exists for each harness the plugin targets, using that harness's own schema: Claude Code `.claude-plugin/marketplace.json` lists the plugin under `plugins[]` with a resolvable `source` (string or object) and a `category` (`policy.*` do not exist here); the Codex registration (`~/.agents/plugins/marketplace.json` or `~/.codex/config.toml [marketplaces]`) carries `policy.installation`, `policy.authentication`, `category`, and a resolvable `source.path`. A targeted harness with no entry is a deduction; do not deduct a Claude Code entry for lacking Codex-only `policy` fields.
 
 ## Grade bands
 

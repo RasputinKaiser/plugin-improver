@@ -8,7 +8,7 @@ Ready an existing plugin for publication to both marketplaces. This skill prepar
 ## 1. Preconditions — block on any failure
 
 - **Clean git state:** `git status --porcelain` must be empty. Uncommitted work → stop; ask the user to commit or stash.
-- **Green validator:** run `../../scripts/validate.py` from the repo root; it must exit 0. Any FAIL → stop and report. Publishing a broken plugin is regression.
+- **Green validator:** from the repo root run `python3 scripts/validate.py` (or, for another plugin, `python3 scripts/validate.py <plugin-dir>`); it must exit 0. Any FAIL → stop and report. Publishing a broken plugin is regression.
 - **Agreeing versions:** read `version` from `.claude-plugin/plugin.json` AND `.codex-plugin/plugin.json` (ignore any Codex `+build` suffix). They must already match. Drift → stop and reconcile first.
 
 ## 2. Confirm or bump the version
@@ -50,7 +50,7 @@ Follow the shared style in `../plugin-audit/references/report-style.md`; close w
 ```
 ## Release ready: plugin-improver v1.0.0 → v1.1.0
 
-✅ clean tree · ✅ validate.py 12/12 · ✅ versions agree · 🧾 CHANGELOG updated
+✅ clean tree · ✅ validate.py 7/7 · ✅ versions agree · 🧾 CHANGELOG updated
 
 | Manifest | Action |
 |---|---|

@@ -3,6 +3,17 @@
 All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## 1.0.1 - 2026-07-20
+
+### Changed
+- **`scripts/validate.py` is now target-aware:** `python3 scripts/validate.py <plugin-dir>` validates any dual-harness plugin (the fixed 7-skill roster is enforced only for plugin-improver itself). This makes `plugin-scaffold`'s and `plugin-release`'s validation steps actually runnable against other plugins.
+
+### Fixed
+- Adversarial audit fixes: reference-integrity now also scans `references/*.md` (code-fence templates and absolute-path fragments excluded); marketplace check matches `plugins[].name` instead of a loose substring.
+- Scoring rubric no longer applies Codex-only `policy.installation`/`policy.authentication` to Claude Code marketplace entries, and lets the trigger opt-out points be earned on Claude Code (no `openai.yaml` flag there). Rubric still totals 100.
+- Corrected skill instructions: `plugin-release` validator path (`scripts/validate.py`, not `../../`), `plugin-scaffold` validation step, the Codex `source.path` marketplace example, a false `plugin.json` `icon` field claim, and a hook-input `model`-field caveat for Claude Code.
+- `scripts/sync.sh` no longer clobbers a Codex install's `state.yaml` (excluded from `--delete`).
+
 ## 1.0.0 - 2026-07-20
 
 ### Added

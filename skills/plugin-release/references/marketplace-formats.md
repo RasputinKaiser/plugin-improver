@@ -50,13 +50,13 @@ Codex registers marketplaces per USER, not from a repo file. Use either form (or
 ```json
 {
   "name": "plugin-improver",
-  "source": { "source": "local", "path": "./.codex/plugins/plugin-improver" },
+  "source": { "source": "local", "path": "./plugins/plugin-improver" },
   "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
   "category": "Developer Tools"
 }
 ```
 
-`source.path` is relative to the marketplace file's own directory (`~/.agents/plugins/`). For a repo checkout instead of a copy under `~/.codex/plugins/`, point it at the checkout path.
+`source.path` is relative to the marketplace file's own directory (`~/.agents/plugins/`), so `./plugins/<name>` resolves to `~/.agents/plugins/plugins/<name>`. Use whatever path actually holds the plugin — an absolute path to a repo checkout is fine; verify the target exists before handing the snippet over.
 
 **Form 2 — `~/.codex/config.toml` `[marketplaces.<name>]`** (registers a source root directly):
 

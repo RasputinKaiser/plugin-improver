@@ -37,7 +37,7 @@ The config shape and per-event contracts below are the **Codex** schema (source 
 
 ## Common stdin fields (every event)
 
-`session_id`, `transcript_path` (nullable), `cwd`, `hook_event_name`, `model`. Turn-scoped events add `turn_id`.
+`session_id`, `transcript_path` (nullable), `cwd`, `hook_event_name`, `model`. Turn-scoped events add `turn_id`. (Claude Code: `model` is not guaranteed on every event — read it only where documented, e.g. SessionStart.)
 
 ## Common output fields (SessionStart, UserPromptSubmit, Stop)
 

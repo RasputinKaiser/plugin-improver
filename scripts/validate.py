@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Validator / self-test for the plugin-improver dual-harness plugin.
+"""Validator / self-test for dual-harness (Claude Code + Codex) plugins.
 
-Stdlib only. Run from the repo root:  python3 scripts/validate.py [--json]
+Stdlib only.
+  python3 scripts/validate.py [--json]          # validate this repo (self-test)
+  python3 scripts/validate.py <plugin-dir>      # validate another plugin
 Exit 0 if every check passes, 1 if any check fails.
 
 The check registry (CHECKS) is a list of (name, fn) pairs — add a check by
-appending one. Each fn takes the repo root Path and returns (ok, messages).
+appending one. Each fn takes the target plugin root Path and returns (ok, messages).
 """
 import json
 import re
@@ -13,6 +15,8 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
+
+# The full skill roster THIS plugin ships — enforced only when validating self.
 
 # The full skill roster this plugin ships once the rebuild is integrated.
 EXPECTED_SKILLS = [
@@ -27,15 +31,23 @@ EXPECTED_SKILLS = [
 
 KEBAB = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 SEMVER = re.compile(r"^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.\-]+)*$")
-# Relative reference tokens in a skill body: references/x.md, ../a/b.md, scripts/z.py
-REF_TOKEN = re.compile(r"(?:\.\./[\w./-]+|references/[\w./-]+|scripts/[\w./-]+|assets/[\w./-]+)\.\w+")
+# Relative reference tokens in a skill body: references/x.md, ../a/b.md, scripts/z.py.
+# The lookbehind requires a path boundary so mid-path fragments of an absolute/home
+# path (e.g. ~/.codex/.../scripts/plugin-eval.js) are NOT treated as repo links.
+REF_TOKEN = re.compile(r"(?<![\w/~.-])(?:\.\./[\w./-]+|references/[\w./-]+|scripts/[\w./-]+|assets/[\w./-]+)\.\w+")
 ASSET_EXT = re.compile(r"\.(svg|png|jpe?g|webp|ico|gif)$", re.I)
+FENCE = re.compile(r"```.*?```", re.S)  # fenced code blocks hold illustrative templates
 
 
 # ---------- small helpers ----------
 
 def load_json(path):
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def strip_fences(text):
+    """Drop ``` fenced code blocks — their paths are examples, not real links."""
+    return FENCE.sub("", text)
 
 
 def base_version(v):
@@ -128,12 +140,14 @@ def check_manifests(root):
     else:
         try:
             mkt = load_json(market_p)
-            name = parsed.get("codex", {}).get("name") or "plugin-improver"
-            if name in "".join(walk_strings(mkt)):
-                msgs.append(f"marketplace references {name}")
+            name = parsed.get("codex", {}).get("name") or parsed.get("claude", {}).get("name")
+            entries = mkt.get("plugins", []) if isinstance(mkt, dict) else []
+            listed = {e.get("name") for e in entries if isinstance(e, dict)}
+            if name and name in listed:
+                msgs.append(f"marketplace lists {name}")
             else:
                 ok = False
-                msgs.append(f"marketplace does not reference {name}")
+                msgs.append(f"marketplace plugins[] does not list {name!r} (found {sorted(listed)})")
         except Exception as e:
             ok = False
             msgs.append(f"invalid marketplace JSON: {e}")
@@ -188,16 +202,20 @@ def check_body_budget(root):
 def check_reference_integrity(root):
     ok, msgs = True, []
     total = 0
+    # Scan SKILL.md bodies AND their references/*.md files. Fenced code blocks are
+    # stripped first — the paths inside them are illustrative templates, not links.
     for d in iter_skill_dirs(root):
-        text = (d / "SKILL.md").read_text(encoding="utf-8")
-        for tok in sorted(set(REF_TOKEN.findall(text))):
-            total += 1
-            # A link resolves if it exists relative to the skill dir (references/,
-            # ../other-skill/...) OR relative to the repo root (scripts/validate.py).
-            if not ((d / tok).exists() or (root / tok).exists()):
-                ok = False
-                msgs.append(f"{d.name}: broken link {tok}")
-    msgs.append(f"{total} relative links checked")
+        md_files = [d / "SKILL.md"] + sorted((d / "references").glob("*.md")) \
+            if (d / "references").is_dir() else [d / "SKILL.md"]
+        for f in md_files:
+            text = strip_fences(f.read_text(encoding="utf-8"))
+            for tok in sorted(set(REF_TOKEN.findall(text))):
+                total += 1
+                # Resolve relative to the file's own dir, the skill dir, or repo root.
+                if not ((f.parent / tok).exists() or (d / tok).exists() or (root / tok).exists()):
+                    ok = False
+                    msgs.append(f"{d.name}/{f.name}: broken link {tok}")
+    msgs.append(f"{total} relative links checked (prose only)")
     return ok, msgs
 
 
@@ -222,12 +240,17 @@ def check_openai_interface(root):
 
 def check_parity(root):
     ok, msgs = True, []
-    present = {d.name for d in iter_skill_dirs(root)}
-    for name in EXPECTED_SKILLS:
-        if name not in present:
-            ok = False
-            msgs.append(f"missing required skill: {name}")
-    for d in iter_skill_dirs(root):
+    dirs = iter_skill_dirs(root)
+    if not dirs:
+        return False, ["no skills found under skills/"]
+    # The fixed 7-skill roster is only meaningful for plugin-improver itself.
+    if root.resolve() == REPO.resolve():
+        present = {d.name for d in dirs}
+        for name in EXPECTED_SKILLS:
+            if name not in present:
+                ok = False
+                msgs.append(f"missing required skill: {name}")
+    for d in dirs:
         has_skill = (d / "SKILL.md").is_file()
         has_yaml = (d / "agents" / "openai.yaml").is_file()
         gaps = [f for f, present in (("SKILL.md", has_skill), ("openai.yaml", has_yaml)) if not present]
@@ -275,11 +298,11 @@ CHECKS = [
 ]
 
 
-def run():
+def run(target):
     results = []
     for name, fn in CHECKS:
         try:
-            ok, msgs = fn(REPO)
+            ok, msgs = fn(target)
         except Exception as e:
             ok, msgs = False, [f"check crashed: {e}"]
         results.append({"name": name, "ok": ok, "messages": msgs})
@@ -287,15 +310,25 @@ def run():
 
 
 def main():
-    as_json = "--json" in sys.argv[1:]
-    results = run()
+    args = sys.argv[1:]
+    as_json = "--json" in args
+    positional = [a for a in args if not a.startswith("-")]
+    target = Path(positional[0]).resolve() if positional else REPO
+    if not (target / "skills").is_dir() and not (target / ".codex-plugin").is_dir() \
+            and not (target / ".claude-plugin").is_dir():
+        print(f"error: {target} does not look like a plugin root "
+              f"(no skills/, .codex-plugin/, or .claude-plugin/)", file=sys.stderr)
+        return 2
+    results = run(target)
     passed = sum(1 for r in results if r["ok"])
     total = len(results)
     if as_json:
         summary = f"PASS {passed}/{total}" if passed == total else f"FAIL: {total - passed}"
-        print(json.dumps({"results": results, "passed": passed, "total": total,
-                          "summary": summary}, indent=2))
+        print(json.dumps({"target": str(target), "results": results, "passed": passed,
+                          "total": total, "summary": summary}, indent=2))
     else:
+        if target != REPO:
+            print(f"target: {target}\n")
         for r in results:
             print(f"[{'PASS' if r['ok'] else 'FAIL'}] {r['name']}")
             for m in r["messages"]:

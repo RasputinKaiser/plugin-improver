@@ -2,7 +2,7 @@
 
 How a plugin LOOKS on its install/detail page and in the composer.
 
-**Harness scope.** The `interface` block below and per-skill `agents/openai.yaml` are the **Codex-only** presentation surface — Claude Code ignores both. Claude Code reads its own display fields from `.claude-plugin/plugin.json` (`name`, `description`, `author`, `homepage`, `icon`) and renders skills from their SKILL.md frontmatter. When auditing a dual-harness plugin, check Codex presentation here and confirm the Claude Code `plugin.json` carries a clean `description`/`author`/`icon`; do not penalize a Claude-Code-only plugin for lacking `interface`/openai.yaml.
+**Harness scope.** The `interface` block below and per-skill `agents/openai.yaml` are the **Codex-only** presentation surface — Claude Code ignores both. Claude Code reads its own display fields from `.claude-plugin/plugin.json` (`name`, `displayName`, `description`, `author`, `homepage`, `keywords`) and renders skills from their SKILL.md frontmatter; the Claude Code plugin manifest has no `icon` field. When auditing a dual-harness plugin, check Codex presentation here and confirm the Claude Code `plugin.json` carries a clean `description`/`author`; do not penalize a Claude-Code-only plugin for lacking `interface`/openai.yaml.
 
 ## Plugin-level `interface` (Codex `.codex-plugin/plugin.json`)
 

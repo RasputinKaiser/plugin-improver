@@ -45,7 +45,7 @@ Only if requested. Add `hooks/hooks.json` with one event and a command referenci
 
 ## 6. Validate
 
-Run `python3 scripts/validate.py` from the improver repo against the new plugin (or the inline checks if it's standalone): manifests parse and agree, frontmatter valid, references resolve, every skill has `openai.yaml`. Fix every failure before reporting — a scaffold that doesn't validate is not done.
+Validate the new plugin with the improver's validator, which takes a target path: `python3 <plugin-improver>/scripts/validate.py <new-plugin-dir>`. It checks that both manifests parse and agree, frontmatter is valid, references resolve, and every skill has `openai.yaml` (the fixed 7-skill roster is only enforced when validating the improver itself). If the improver isn't on hand, verify those same items by inspection. Fix every failure before reporting — a scaffold that doesn't validate is not done.
 
 ## 7. Install instructions
 

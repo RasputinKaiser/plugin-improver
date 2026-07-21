@@ -22,7 +22,11 @@ EXCLUDES="
 --exclude=*.pyc
 --exclude=.DS_Store
 --exclude=.plugin-improver
+--exclude=state.yaml
 "
+# NOTE: excluded paths are also protected from --delete (rsync default), so a
+# destination's per-install bookkeeping (.plugin-improver baseline, Codex
+# state.yaml) survives a sync instead of being clobbered.
 
 echo "plugin-improver sync"
 echo "  source: ${REPO_ROOT}"

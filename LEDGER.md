@@ -1,5 +1,25 @@
 # Improvement ledger — plugin-improver
 
+## 2026-07-20 — 1.0.0 → 1.0.1 (dogfood pass: adversarial self-audit)
+- Ran two adversarial Opus reviewers over the fresh 1.0.0 (new skills; dual-harness
+  correctness). Reviewers CONFIRMED the suspect "On Claude Code…" hook claims are true
+  and the rubric totals 100 — no HIGH defects. Applied the confirmed fixes:
+  - `scripts/validate.py`: added an optional target-path arg (validate any plugin, not
+    just self; roster enforced only for self); reference-integrity now scans `references/*.md`
+    with code-fences stripped + a path-boundary lookbehind (an external `.../scripts/x.js`
+    fragment was a false positive — fixed); marketplace check now matches `plugins[].name`.
+  - scoring-rubric: scoped Codex-only `policy.installation`/`policy.authentication` away from
+    Claude Code marketplace entries; trigger opt-out points earnable on Claude Code too. Total
+    still 100.
+  - Fixed instruction bugs: plugin-release validator path, plugin-scaffold validation step,
+    Codex `source.path` example, false `plugin.json` `icon` claim, hook `model`-field caveat,
+    a stale `12/12` report example.
+  - `scripts/sync.sh`: exclude `state.yaml` from `--delete` so a Codex install's bookkeeping
+    survives a sync.
+- Verify: validator 7/7 (self + external target), curator selftest 69/69, rubric = 100, CI green.
+- Deliberately NOT done: no version bump beyond patch (all fixes/wording); did not add a
+  `commands/` surface for Claude Code (skills auto-trigger — unpaid context).
+
 ## 2026-07-20 — 0.4.0 → 1.0.0 (dual-harness rebuild, planner + parallel Opus workers)
 - Made the plugin genuinely dual-harness (Claude Code + Codex) from one shared
   `skills/` tree. Added `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`;
