@@ -3,6 +3,11 @@
 All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## 1.1.0 - 2026-07-20
+
+### Added
+- **Claude Code slash commands.** A `commands/` file per skill (`/plugin-improver:plugin-audit`, `…:plugin-improve`, and so on) gives Claude Code users explicit invocation matching Codex's `$skill`. Auto-discovered by Claude Code; ignored by Codex. `scripts/validate.py` gained a "Claude Code commands" check (well-formedness always; one-command-per-skill enforced for plugin-improver itself).
+
 ## 1.0.1 - 2026-07-20
 
 ### Changed

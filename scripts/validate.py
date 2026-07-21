@@ -262,6 +262,32 @@ def check_parity(root):
     return ok, msgs
 
 
+def check_commands(root):
+    """Claude Code slash-command surface (optional; the Codex analogue is $skill).
+    If commands/ exists, every file must be well-formed. For plugin-improver itself,
+    require one command per skill so the two harnesses reach explicit-invocation parity."""
+    ok, msgs = True, []
+    cmd_dir = root / "commands"
+    if not cmd_dir.is_dir():
+        msgs.append("no commands/ (Claude Code explicit-invocation surface absent — optional)")
+        return ok, msgs
+    cmds = sorted(cmd_dir.glob("*.md"))
+    for c in cmds:
+        fm, _ = split_frontmatter(c.read_text(encoding="utf-8"))
+        if not fm or not fm.get("description"):
+            ok = False
+            msgs.append(f"commands/{c.name}: missing frontmatter description")
+        else:
+            msgs.append(f"commands/{c.name}: ok")
+    if root.resolve() == REPO.resolve():
+        have = {c.stem for c in cmds}
+        for name in EXPECTED_SKILLS:
+            if name not in have:
+                ok = False
+                msgs.append(f"no command for skill: {name}")
+    return ok, msgs
+
+
 def check_assets(root):
     ok, msgs = True, []
     manifests = [root / ".claude-plugin" / "plugin.json", root / ".codex-plugin" / "plugin.json"]
@@ -293,6 +319,7 @@ CHECKS = [
     ("Body budget", check_body_budget),
     ("Reference integrity", check_reference_integrity),
     ("Codex per-skill interface", check_openai_interface),
+    ("Claude Code commands", check_commands),
     ("Parity", check_parity),
     ("Assets", check_assets),
 ]

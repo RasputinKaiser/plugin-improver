@@ -71,7 +71,7 @@ Point any skill at a plugin folder and describe the goal:
 - "Improve my-plugin" — implicit invocation picks `plugin-improve`.
 - "Curate my skills and find version drift."
 
-Both harnesses auto-trigger skills from their descriptions. To invoke one explicitly, use the harness's own syntax: on Codex, `$plugin-improve`; on Claude Code, the Skill tool (or say the skill name). The skill bodies are harness-neutral and branch only where the two genuinely diverge (hooks capabilities, feature flags, manifest paths).
+Both harnesses auto-trigger skills from their descriptions. To invoke one explicitly, use the harness's own syntax: on Codex, `$plugin-improve`; on Claude Code, the matching slash command (`/plugin-improver:plugin-improve`, one per skill) or the Skill tool. The skill bodies are harness-neutral and branch only where the two genuinely diverge (hooks capabilities, feature flags, manifest paths).
 
 ## Development
 

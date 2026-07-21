@@ -1,5 +1,17 @@
 # Improvement ledger — plugin-improver
 
+## 2026-07-20 — 1.0.1 → 1.1.0 (Claude Code commands surface)
+- Added a `commands/` slash command per skill (7 total) — Claude Code's explicit-invocation
+  analogue of Codex `$skill`. Auto-discovered by Claude Code, ignored by Codex; each is a thin
+  wrapper that invokes the matching skill on an optional target path.
+- `scripts/validate.py`: new "Claude Code commands" check (now 8 checks) — every command file
+  must carry a frontmatter description; for plugin-improver itself, one command per skill is
+  required. Neutralized a hardcoded `7/7` example so the check count can grow without going stale.
+- README Usage + docs/architecture.md updated to document the commands surface.
+- Minor bump (new capability, no behavior change to existing skills). Verify: validator 8/8
+  (self + external), curator 69/69, CI green. NOT done: no per-command `allowed-tools`
+  restriction — these commands only invoke read/write skill work the user already drives.
+
 ## 2026-07-20 — 1.0.0 → 1.0.1 (dogfood pass: adversarial self-audit)
 - Ran two adversarial Opus reviewers over the fresh 1.0.0 (new skills; dual-harness
   correctness). Reviewers CONFIRMED the suspect "On Claude Code…" hook claims are true

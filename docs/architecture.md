@@ -13,6 +13,7 @@ Every skill lives in `skills/<skill>/` and its instructions live in a **harness-
 |---|---|---|
 | `SKILL.md` | read (frontmatter + body) | read (frontmatter + body) |
 | `agents/openai.yaml` | ignored | read — Codex-only per-skill interface (`display_name`, `interface`) |
+| `commands/*.md` | read — one slash command per skill (Claude-Code-only explicit invocation, the analogue of Codex `$skill`) | ignored |
 | `references/*.md` | lazy-loaded on demand | lazy-loaded on demand |
 | `scripts/*` | run when the body calls them | run when the body calls them |
 

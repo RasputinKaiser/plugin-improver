@@ -50,7 +50,7 @@ Follow the shared style in `../plugin-audit/references/report-style.md`; close w
 ```
 ## Release ready: plugin-improver v1.0.0 → v1.1.0
 
-✅ clean tree · ✅ validate.py 7/7 · ✅ versions agree · 🧾 CHANGELOG updated
+✅ clean tree · ✅ validator green · ✅ versions agree · 🧾 CHANGELOG updated
 
 | Manifest | Action |
 |---|---|
