@@ -4,10 +4,10 @@ Reports are read in chat. Optimize for scannability: the verdict in the first 3 
 
 ## Scorecard
 
-Lead with grade + total, then a compact table with bar sparklines:
+Lead with band + total, then a compact table with bar sparklines:
 
 ```
-## Plugin health: my-plugin — 82/100 (Good)
+## Plugin health: my-plugin — 82/100 (Strong)
 
 | Dimension | Score | |
 |---|---|---|
@@ -19,7 +19,9 @@ Lead with grade + total, then a compact table with bar sparklines:
 | Distribution | 8/10 | ████████░░ |
 ```
 
-Bars: 10 chars wide, `█` per 10%, `▌` for half, `░` fill. Always same width so columns align.
+Bands (frozen — use these labels only, never legacy words like "Good"/"Fair"): **92–100 Exceptional · 82–91 Strong · 68–81 Solid · 50–67 Needs work · <50 Poor**. A mature-but-improvable plugin lands in Solid/Strong, not Exceptional. The example totals 82 → **Strong**.
+
+Bars: 10 chars wide, `█` per 10%, `▌` for half, `░` fill. Always same width so columns align. When N/A dimensions are dropped (see Diagnostics), the table shows only the scored dimensions — fewer than 6 rows is expected, and each row's `/max` reflects the redistributed weight.
 
 ## Findings
 
@@ -38,13 +40,14 @@ Severity: 🔴 breaks behavior, 🟡 degrades quality, 🟢 cosmetic. Sort 🔴�
 A compact block placed right under the scorecard, showing the machine floor vs judgment split and the two runtime signals. Keep it to 3–4 lines:
 
 ```
-🔎 Floor 71/100 auto (score.py) · +9 judged = 80/100 · needs_judgment: skill-quality, trigger-negativescope
+🔎 Floor 74/100 auto (score.py, incl. skill_quality signal) · +8 judged = 82/100 (Strong) · needs_judgment: skill-quality depth, trigger-negativescope
 🪙 Session tax 4.1k tok · body headroom OK · descriptions +180 tok vs baseline (tokens.py)
 🩺 Runtime: 2 hook errors, 1 skill error in 14 sessions — `hooks/lint.sh` exit 1 ×2 (errscan.py)
 ✅ Runtime clean — no hook/tool/skill errors in scanned sessions
 ```
 
-- Floor line: `auto` total from `score.py`, points you judged on top, final, and which dimensions still carried `needs_judgment` notes.
+- Floor line: `auto` total from `score.py`, points you judged on top, final, and which dimensions still carried `needs_judgment` notes. The floor now includes graduated `skill_quality` machine signal, so it reaches higher than the old manifest-only floor — do not treat a high `auto` as saturation.
+- N/A dimensions: when a dimension does not apply (e.g. the plugin ships no hooks), it is DROPPED and its weight redistributed across the applicable dimensions — it does NOT earn a free max. Name any dropped dimension here so the scorecard's `/max` values (and its shorter-than-6 row count) are traceable.
 - Token line: session-tax headline, budget headroom (or the skill that blew it), and baseline delta — the evidence behind any Context economy deduction.
 - Runtime line: error counts per plugin/skill and the top offending handler; when clean, collapse to the single ✅ line. This is the evidence behind any Hooks health deduction.
 
