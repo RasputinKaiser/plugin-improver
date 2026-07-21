@@ -1,0 +1,5 @@
+interface:
+  display_name: "Plugin Hooks"
+  short_description: "Add or repair lifecycle hooks"
+  brand_color: "#5B8DEF"
+  default_prompt: "Review this plugin's hooks and fix any broken contracts"

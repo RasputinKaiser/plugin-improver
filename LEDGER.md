@@ -1,0 +1,117 @@
+# Improvement ledger — plugin-improver
+
+## 2026-07-07 — 0.3.1 → 0.3.2 (pass by Claude/Cowork)
+- plugin-improve: failure-handling fallbacks for missing scoring-rubric.md /
+  regression-checklist.md (inline six-dimension scores; minimal verify list).
+  Rationale: exact failure hit twice on 2026-07-07 in stripped skill-store
+  copies; rubric 2.4 failure-handling.
+- plugin-audit: locate step now maps plugin sources via config.toml
+  [marketplaces] and forbids auditing read-only cache copies.
+- Created LEDGER.md + .plugin-improver/baseline.json (the improver had no
+  baseline of its own).
+- Score 93 -> 96 (skill_quality 22->25). Context: bodies +71 words (+4.7%),
+  descriptions unchanged — within 10% budget.
+- Deliberately NOT done: registering [marketplaces.ralto-local] — its cache
+  hosts 14 plugins from different source dirs; a single-plugin source would
+  risk orphaning the other 13 on sync. NEXT PASS: build a proper ralto-local
+  marketplace root (manifest listing all member plugins), then register it.
+- Deliberately NOT done: state.yaml removal (may be packaging-tool state;
+  needs user confirmation).
+
+### 2026-07-07 addendum (0.3.2)
+Deferred marketplace registration closed: [marketplaces.ralto-local] now registered, source ~/plugins/ralto-local — a root manifest listing all 9 member plugins via symlinks, so no member is orphaned by a sync. Verified: config tomllib-valid, throwaway codex exec session ran clean, all cache versions intact (every source version matched cache exactly at registration time).
+
+## 2026-07-13 — 0.3.2 → 0.3.3 (pass by Claude/Cowork, self-applied: /plugin-improve on plugin-improver)
+- Marketplace entry (ralto-local): added missing policy.authentication
+  ON_INSTALL; verified source.path symlink resolves to this root. (rubric 6.3)
+- plugin-improve Record step: multi-manifest sync line — .claude-plugin /
+  .ncode-plugin siblings drift if only .codex-plugin is bumped; observed as a
+  real risk on retro (its build.sh happens to sync; the loop alone wouldn't).
+  +27 words, paid within budget.
+- Added .plugin-improver/trigger-matrix.md for this plugin's own four skills
+  (regression checklist references it "if present" — now it's present; not
+  loaded eagerly, zero context cost).
+- Finding withdrawn with evidence: state.yaml is NOT dead weight — it is the
+  owner's active cross-repo packaging/state convention (retro, apifyer, goal,
+  SIPS all carry one; retro's updated 3x this week). context_economy 19 -> 20
+  by correction, not deletion.
+- Score 96 -> 99 (context 19->20, distribution 8->10; others unchanged;
+  trigger stays 19: user-level skill-store duplicates of these four skills
+  still exist outside the plugin — user-space cleanup, deliberately not done
+  here).
+- Context delta: bodies 1590 -> 1610 words (+1.3%); descriptions 1339 -> 1339.
+- Verify: manifests + marketplace JSON parse; names/dirs unchanged; frontmatter
+  valid; trigger matrix prompts map 1:1; no hooks. One tooling stumble during
+  verify (frontmatter regex assumed trailing newline after description; fixed
+  in the check script, not the plugin).
+- Next-pass candidate: dedupe the user-level skill-store copies of these four
+  skills (trigger_precision's last point) — needs user decision on which copy
+  wins.
+
+## 2026-07-13 — 0.3.3 → 0.3.4 (pass 2, user-directed: harden beyond rubric)
+- All three changes live in lazy references or one Baseline sentence; score
+  unchanged 99/100 (the only open point is the excluded user-space dedupe).
+  Justification for a flat-score pass: each change encodes a failure OBSERVED
+  this week, not speculation —
+  (1) checklist now runs the target's own tests: retro's suite was red on
+      2026-07-13 while its state.yaml claimed 34/34 green;
+  (2) checklist now verifies artifact content: an unmodified .skill zip
+      shipped behind a successful-looking pipeline the same day;
+  (3) baseline findings are hypotheses: the state.yaml "dead weight" finding
+      survived two baselines before being disproven;
+  (4) rubric: multi-manifest version drift named explicitly (retro 1.2.0
+      precedent) — bookkeeping: CHANGELOG caught up (was stale at 0.3.1).
+- Context delta: bodies 1610 -> 1640 (+1.9%, the Baseline sentence);
+  descriptions unchanged 1339. References grew ~90 words (lazy, free).
+- Deliberately NOT done: user-level skill-store dedupe (excluded by user);
+  any further pass without new evidence — 99/100 with hardened references is
+  STABLE; next passes should be evidence-driven, not scheduled.
+
+## 2026-07-20 — 0.3.4 → 0.4.0 (merge pass: skill-curator absorbed, v3 expansion)
+
+- User-directed consolidation: skill-curator (standalone skill, duplicated in
+  ~/.codex/skills AND the Claude account skill store) is now the plugin's fifth
+  skill. Closes the long-open trigger_precision point ON THE CODEX SIDE
+  (~/.codex/skills/skill-curator archived via curator archive); the Claude
+  account-store copies of all five skills still exist until the user swaps
+  them in the claude.ai UI — delivered as packaged skill files this session.
+- skill-curator v3 (curator.py 1756 -> 1938 lines, selftest 47 -> 62 checks,
+  all green sandbox AND host, sha256 parity gated):
+  new plugin-level findings plugin_version_drift / duplicate_plugins /
+  stale_plugin_caches; new scan layer over plugin SOURCE roots
+  (--plugin-source; default ~/.codex/plugins + ~/.claude/plugins minus cache/);
+  drift always leads "Do these first" (correctness before token savings);
+  findings are ledger-fingerprinted like every other section.
+  Motivating real case: this plugin's own state.yaml claimed installed_cache
+  0.3.2 while the real cache dir was 0.3.4 (stale bookkeeping); and during
+  this pass, source 0.4.0 vs cache 0.3.4 was live drift the new finding
+  flagged before the refresh (see verification below).
+- Context discipline for the merged skill: description rewritten 585 -> 391
+  chars; routing-evals + plugin-eval sections moved to a lazy
+  references/routing-evals.md; body 563 words. agents/openai.yaml added.
+- plugin-audit description: negative-scope clause swapped to point
+  inventory-wide curation at skill-curator (+55 chars, paid for by the
+  skill-curator trim). Trigger matrix now covers five skills; the old
+  "audit my skills for sprawl" near-miss row is a should-trigger.
+- Score after re-check against the rubric: 99/100 (manifest 15, skills 25,
+  triggers 19, context 20, hooks 10, distribution 10). The open triggers
+  point remains the Claude-side user-store duplicates (user action).
+  Note: totals include a NEW skill; body words grew 1640 -> ~2200 by merge,
+  not bloat — the same content previously cost two skill-store copies.
+- Deliberately NOT done: absorbing tool-factory or skill-creator (user chose
+  plugin-improver's four + skill-curator only); auto-deleting any user-store
+  copy (archive-never-delete, user approval per item).
+- Next-pass candidate: run the new plugin_version_drift finding across all
+  ralto-local plugins and refresh any stale installs it surfaces.
+- Post-merge adversarial review (independent Claude subagent; the planned
+  codex-CLI second opinion hit the OpenAI usage limit until Jul 25): 4
+  confirmed bugs found and FIXED same-pass, selftest 62 -> 69 checks —
+  unguarded listdir crash on unreadable cache dirs; marketplace-less cache
+  layouts mis-keyed as plugin="version" (false duplicate_plugins + silent
+  drift misses); same-name source in both default roots double-counted drift
+  under one fingerprint; 'unknown'/'latest' guard now applied to the source
+  side too. Also: duplicate_plugins fp keyed on name only (ledger stability),
+  cross-root cache maps merge instead of clobber, base_version strips one
+  leading v only. Reviewer's remaining nitpicks (top_actions drift eviction
+  at 6+, --no-plugins vs explicit --plugin-cache precedence) deliberately
+  left; recorded here so the next pass can litigate them.

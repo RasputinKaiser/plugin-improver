@@ -1,0 +1,5 @@
+interface:
+  display_name: "Plugin Audit"
+  short_description: "Score a plugin's health out of 100"
+  brand_color: "#5B8DEF"
+  default_prompt: "Audit the plugin in this folder and show the scorecard"

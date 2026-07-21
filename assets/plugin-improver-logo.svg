@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Plugin Improver logo">
+  <rect width="512" height="512" rx="112" fill="#111827"/>
+  <path d="M116 330 256 86l140 244H116Z" fill="#5B8DEF"/>
+  <path d="M166 306h180L256 146l-90 160Z" fill="#F7FBFF"/>
+  <circle cx="256" cy="252" r="34" fill="#111827"/>
+  <path d="M146 382h220" stroke="#8CE99A" stroke-width="36" stroke-linecap="round"/>
+  <path d="M210 382h92" stroke="#111827" stroke-width="20" stroke-linecap="round"/>
+</svg>

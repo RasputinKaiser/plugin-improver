@@ -1,0 +1,5 @@
+interface:
+  display_name: "Skill Curator"
+  short_description: "Curate the whole skill + plugin inventory"
+  brand_color: "#5B8DEF"
+  default_prompt: "Run skill-curator and show me what to dedupe or prune first"

@@ -1,0 +1,42 @@
+{
+  "name": "plugin-improver",
+  "version": "0.4.0+codex.20260720201503",
+  "description": "Audit, tune, and evolve Codex plugins - and curate the whole skill+plugin inventory: score plugin health, sharpen trigger descriptions, repair lifecycle hooks, run non-regressing improvement passes, and detect skill sprawl, trigger collisions, duplicate installs, and plugin version drift across Codex and Claude.",
+  "author": {
+    "name": "RasputinKaiser",
+    "url": "https://github.com/RasputinKaiser"
+  },
+  "license": "MIT",
+  "keywords": [
+    "plugins",
+    "meta",
+    "audit",
+    "hooks",
+    "skills",
+    "quality",
+    "curation",
+    "sprawl"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Plugin Improver",
+    "shortDescription": "Improve plugins, curate skill sprawl",
+    "longDescription": "Plugin Improver gives Codex authors a disciplined loop for making plugins better. It scores plugin health, tunes skill triggers, repairs lifecycle hooks, and runs bounded improvement passes with regression checks and context-cost discipline. Its skill-curator skill widens the lens to the whole inventory: skill sprawl, trigger collisions, duplicate installs, and source-vs-cache plugin version drift across Codex and Claude.",
+    "developerName": "RasputinKaiser",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "brandColor": "#5B8DEF",
+    "composerIcon": "./assets/plugin-improver-icon.svg",
+    "logo": "./assets/plugin-improver-logo.svg",
+    "defaultPrompt": [
+      "Use $plugin-audit to score the plugin in this folder.",
+      "Use $plugin-improve to run one improvement pass on my plugin.",
+      "Use $plugin-hooks to add a SessionStart hook to my plugin.",
+      "Use $plugin-tune-triggers to fix a skill that never fires.",
+      "Use $skill-curator to find sprawl, collisions, and version drift across my skills and plugins."
+    ]
+  }
+}

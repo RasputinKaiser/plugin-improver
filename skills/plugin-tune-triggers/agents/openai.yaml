@@ -1,0 +1,5 @@
+interface:
+  display_name: "Plugin Tune Triggers"
+  short_description: "Sharpen skill trigger behavior"
+  brand_color: "#5B8DEF"
+  default_prompt: "Tune this plugin's skill triggers and show the matrix"

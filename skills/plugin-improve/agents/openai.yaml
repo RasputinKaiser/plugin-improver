@@ -1,0 +1,5 @@
+interface:
+  display_name: "Plugin Improve"
+  short_description: "Run a bounded plugin improvement pass"
+  brand_color: "#5B8DEF"
+  default_prompt: "Improve this plugin, verify it, and report the delta"
