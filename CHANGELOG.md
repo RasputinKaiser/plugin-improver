@@ -3,6 +3,11 @@
 All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## 1.1.1 - 2026-07-20
+
+### Changed
+- **`scripts/sync.sh` now installs on Claude Code automatically** when the `claude` CLI is present: it adds/refreshes the marketplace and installs/updates the plugin (`claude plugin marketplace add|update`, `claude plugin install|update`), instead of only printing the interactive `/plugin` commands. Idempotent; falls back to printing the slash commands if the CLI is absent.
+
 ## 1.1.0 - 2026-07-20
 
 ### Added

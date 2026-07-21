@@ -1,5 +1,11 @@
 # Improvement ledger — plugin-improver
 
+## 2026-07-20 — 1.1.0 → 1.1.1 (sync.sh auto-installs on Claude Code)
+- `scripts/sync.sh` now performs the Claude Code marketplace add/install/update via the
+  `claude` plugin CLI (idempotent; prints the interactive fallback if the CLI is missing),
+  so a single `bash scripts/sync.sh` genuinely installs on BOTH harnesses. Previously it
+  only printed the Claude Code slash commands. Patch bump (tooling; no skill/behavior change).
+
 ## 2026-07-20 — 1.0.1 → 1.1.0 (Claude Code commands surface)
 - Added a `commands/` slash command per skill (7 total) — Claude Code's explicit-invocation
   analogue of Codex `$skill`. Auto-discovered by Claude Code, ignored by Codex; each is a thin

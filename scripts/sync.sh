@@ -45,19 +45,30 @@ echo "    2. Verify: the plugin's skills appear (e.g. invoke plugin-audit)."
 echo
 
 # ---- Claude Code ---------------------------------------------------------
-echo "==> Claude Code: add this repo as a marketplace (do NOT hand-copy the cache)"
-if [ -f "${REPO_ROOT}/.claude-plugin/marketplace.json" ]; then
-  echo "    marketplace manifest: ${REPO_ROOT}/.claude-plugin/marketplace.json"
+# Claude Code installs from a marketplace, not a hand-copied cache. If the
+# `claude` CLI is present we do the add/install/update directly (idempotent);
+# otherwise we print the interactive slash commands as a fallback.
+echo "==> Claude Code: ${PLUGIN_NAME} marketplace"
+if command -v claude >/dev/null 2>&1; then
+  if claude plugin marketplace list 2>/dev/null | grep -q "${PLUGIN_NAME}"; then
+    claude plugin marketplace update "${PLUGIN_NAME}" >/dev/null 2>&1 || true
+    echo "    marketplace refreshed."
+  else
+    claude plugin marketplace add "${REPO_ROOT}" >/dev/null 2>&1 || true
+    echo "    marketplace added."
+  fi
+  if claude plugin list 2>/dev/null | grep -q "${PLUGIN_NAME}@${PLUGIN_NAME}"; then
+    claude plugin update "${PLUGIN_NAME}@${PLUGIN_NAME}" >/dev/null 2>&1 || true
+    echo "    plugin updated (restart Claude Code to apply)."
+  else
+    claude plugin install "${PLUGIN_NAME}@${PLUGIN_NAME}" >/dev/null 2>&1 \
+      && echo "    plugin installed." \
+      || echo "    install failed — run: claude plugin install ${PLUGIN_NAME}@${PLUGIN_NAME}"
+  fi
 else
-  echo "    NOTE: ${REPO_ROOT}/.claude-plugin/marketplace.json not found yet"
-  echo "          (it is created by the rebuild); the commands below still apply."
+  echo "    'claude' CLI not found. In an interactive Claude session run:"
+  echo "      /plugin marketplace add ${REPO_ROOT}"
+  echo "      /plugin install ${PLUGIN_NAME}@${PLUGIN_NAME}   (or /plugin marketplace update ${PLUGIN_NAME})"
 fi
 echo
-echo "  Next steps (Claude Code) - run inside an interactive Claude session:"
-echo "    /plugin marketplace add ${REPO_ROOT}"
-echo "    /plugin install ${PLUGIN_NAME}@${PLUGIN_NAME}"
-echo
-echo "  Already installed? Refresh it:"
-echo "    /plugin marketplace update ${PLUGIN_NAME}"
-echo
-echo "Done. Codex synced to disk; Claude Code via the marketplace commands above."
+echo "Done. Codex synced to disk; Claude Code marketplace add/install/update handled above."
