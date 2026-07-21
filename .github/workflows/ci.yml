@@ -28,5 +28,8 @@ jobs:
       - name: Portfolio selftest
         run: python3 scripts/portfolio.py selftest
 
+      - name: Calibrate selftest (saturation meter)
+        run: python3 scripts/calibrate.py selftest
+
       - name: Self-score floor (deterministic auto-score must not regress)
         run: python3 scripts/score.py . --min 57
