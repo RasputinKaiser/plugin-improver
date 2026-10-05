@@ -26,16 +26,47 @@ Codex** from a single repo. Contributions must keep both harnesses correct.
   `version` (the Codex manifest may carry a `+codex.<build>` metadata suffix; the
   base semver must match). The validator enforces this.
 
+## Current CI checks
+
+Run the [workflow's](.github/workflows/ci.yml) command set from the repository root:
+
+```bash
+python3 scripts/validate.py
+python3 skills/skill-curator/scripts/curator.py selftest
+python3 scripts/score.py selftest
+python3 scripts/portfolio.py selftest
+python3 scripts/calibrate.py selftest
+python3 scripts/score.py . --min 70
+```
+
+The deterministic selftests use temporary fixtures. The final command checks the
+current repository against CI's score floor. Diagnostic warnings are advisory;
+validator error findings fail the run. See [troubleshooting](docs/troubleshooting.md)
+for finding codes and score-baseline caveats. For documentation changes, check
+relative links and verify every new command against its script's CLI parser.
+Report any checks you could not run and why.
+
 ## Installing locally
 
-Sync the repo into both harness plugin dirs with:
+After reviewing the helper, sync the source into Codex and install or refresh the
+Claude Code marketplace with:
 
 ```
 scripts/sync.sh
 ```
 
-This installs into `~/.codex/plugins/` and `~/.claude/plugins/` so you can exercise
-your changes in a real session on each harness.
+The helper uses `rsync --delete` to refresh `~/.codex/plugins/plugin-improver/`.
+It preserves excluded per-install bookkeeping such as `.plugin-improver` and
+`state.yaml`, but other destination files absent from the source can be removed.
+Do not keep independent edits in that destination.
+
+For Claude Code, it invokes the available `claude` CLI marketplace add/update and
+plugin install/update commands. Without the CLI it prints the interactive commands
+for you to run; it does not copy files directly into the Claude cache. Some
+marketplace operations tolerate failures, so the helper's final message alone
+does not prove both hosts installed successfully. Verify skills in a new session
+on each host. Codex marketplace registration remains a separate step from copying
+the source to disk; see [the README](README.md#codex).
 
 ## Pull requests
 
@@ -44,3 +75,4 @@ your changes in a real session on each harness.
   and configs depend on.
 - Keep the two manifest versions in agreement in the same PR that bumps either.
 - Author attribution is `RasputinKaiser` only.
+
